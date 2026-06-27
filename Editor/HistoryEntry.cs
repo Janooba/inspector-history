@@ -1,7 +1,9 @@
 using System;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEditor.Search;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 namespace VoidState.InspectorHistory.Editor
@@ -14,35 +16,13 @@ namespace VoidState.InspectorHistory.Editor
         {
             get
             {
-                if (_value == null)
-                {
-                    if (IsPersistentAsset)
-                    {
-                        _value = AssetDatabase.LoadAssetAtPath<Object>(Path);
-                    }
-                }
-
+                if (_value == null) TryGetReference();
                 return _value;
             }
-
             set
             {
                 _value = value;
-                IsPersistentAsset = EditorUtility.IsPersistent(value);
-                
-                if (!IsPersistentAsset && value is GameObject activeGameObject)
-                {
-                    SceneName = activeGameObject.scene.path;
-                    Path = SearchUtils.GetTransformPath(activeGameObject.transform);
-                }
-                else
-                {
-                    SceneName = "";
-                    Path = SearchUtils.GetObjectPath(value);
-                }
-
-                Name = Value.name;
-                Type = Value.GetType().Name;
+                UpdateMetadata();
             }
         }
             
@@ -59,6 +39,45 @@ namespace VoidState.InspectorHistory.Editor
             Value = value;
             Uses = 0;
             IsFavourite = false;
+        }
+
+        public void UpdateMetadata()
+        {
+            if (Value == null) return;
+            
+            IsPersistentAsset = EditorUtility.IsPersistent(Value);
+                
+            if (!IsPersistentAsset && Value is GameObject activeGameObject)
+            {
+                SceneName = activeGameObject.scene.path;
+                Path = SearchUtils.GetTransformPath(activeGameObject.transform);
+            }
+            else
+            {
+                SceneName = "";
+                Path = SearchUtils.GetObjectPath(Value);
+            }
+
+            Name = Value.name;
+            Type = Value.GetType().Name;
+        }
+
+        public void TryGetReference()
+        {
+            if (IsPersistentAsset)
+            {
+                _value = AssetDatabase.LoadAssetAtPath<Object>(Path);
+            }
+            else
+            {
+                var scene = SceneManager.GetSceneByPath(SceneName);
+                if (scene != null && scene.isLoaded)
+                {
+                    _value = GameObject.Find(Path);
+                }
+            }
+            
+            if (_value) UpdateMetadata();
         }
         
         public bool Equals(HistoryEntry other)

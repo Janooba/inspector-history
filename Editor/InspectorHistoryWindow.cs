@@ -91,7 +91,7 @@ namespace VoidState.InspectorHistory.Editor
 
                 //if (_rawHistory.Count > HISTORY_MAX) _rawHistory.RemoveAt(_rawHistory.Count - 1);
 
-                _rawFrequent = _rawHistory.OrderByDescending(x => x.Uses).Take(FREQUENT_MAX).ToList();
+                UpdateFrequent();
 
                 _currentHistoryIndex = 0;
             }
@@ -138,14 +138,14 @@ namespace VoidState.InspectorHistory.Editor
             
             _navbarView.Draw(selectedEntry);
             
-            if (_rawFrequent.Count > 0)
-            {
-                _frequentView.Draw(_rawFrequent, selectedEntry, this);
-            }
-            
             if (_rawFavorites.Count > 0)
             {
                 _favoriteView.Draw(_rawFavorites, selectedEntry, this);
+            }
+            
+            if (_rawFrequent.Count > 0)
+            {
+                _frequentView.Draw(_rawFrequent, selectedEntry, this);
             }
 
             _historyView.Draw(_rawHistory, _currentHistoryIndex, this);
@@ -167,7 +167,7 @@ namespace VoidState.InspectorHistory.Editor
             _currentHistoryIndex = index;
             _navigateFlag = true;
             historyItem.Uses++;
-            _rawFrequent = _rawHistory.OrderByDescending(x => x.Uses).Take(FREQUENT_MAX).ToList();
+            UpdateFrequent();
             Selection.SetActiveObjectWithContext(historyItem.Value, null);
         }
 
@@ -183,6 +183,15 @@ namespace VoidState.InspectorHistory.Editor
                 historyItem.IsFavourite = true;
                 _rawFavorites.Add(historyItem);
             }
+
+            UpdateFrequent();
+        }
+
+        private void UpdateFrequent()
+        {
+            _rawFrequent = _rawHistory.OrderByDescending(x => x.Uses)
+                .Where(x => !x.IsFavourite)
+                .Take(FREQUENT_MAX).ToList();
         }
 
         private void ClearHistory()
@@ -222,8 +231,16 @@ namespace VoidState.InspectorHistory.Editor
                     // Deserialize using Sirenix's binary format
                     _rawHistory = SerializationUtility.DeserializeValue<List<HistoryEntry>>(serializedData, DataFormat.Binary);
 
+                    foreach (var entry in _rawHistory)
+                    {
+                        entry.TryGetReference();
+                    }
+                    
                     // Initialize favorites list from history items
                     _rawFavorites = _rawHistory.Where(x => x.IsFavourite).ToList();
+                    
+                    // Initialize frequent list
+                    UpdateFrequent();
                 }
             }
             catch (Exception ex)
