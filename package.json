@@ -3,5 +3,9 @@
   "version": "1.0.0",
   "displayName": "VoidState Inspector History",
   "description": "A panel that logs inspector selection history for easy back and forth navigation. Users can also favorite certain objects.",
-  "unity": "6000.3"
+  "unity": "6000.3",
+  "author": {
+    "name": "Janooba",
+    "email": "me@janooba.com"
+  }
 }
