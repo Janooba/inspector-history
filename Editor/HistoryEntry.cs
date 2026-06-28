@@ -1,6 +1,5 @@
 using System;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEditor.Search;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -83,7 +82,7 @@ namespace VoidState.InspectorHistory.Editor
         public bool Equals(HistoryEntry other)
         {
             if (other == null) return false;
-            return Equals(Value, other.Value);
+            return Equals(Path, other.Path);
         }
 
         public override bool Equals(object obj)
@@ -94,7 +93,7 @@ namespace VoidState.InspectorHistory.Editor
 
         public override int GetHashCode()
         {
-            return (Value != null ? Value.GetHashCode() : 0);
+            return (Path != null ? Path.GetHashCode() : 0);
         }
 
         public int CompareTo(HistoryEntry other)

@@ -2,11 +2,10 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
-using Object = System.Object;
 
 namespace VoidState.InspectorHistory.Editor
 {
-    public class HistoryListView
+    public class EntryListView
     {
         private HistoryService _service;
         private string _title;
@@ -27,7 +26,7 @@ namespace VoidState.InspectorHistory.Editor
             }
         }
 
-        public HistoryListView(HistoryService service, string title, int maxVisible = int.MaxValue, bool reverseOrder = false)
+        public EntryListView(HistoryService service, string title, int maxVisible = int.MaxValue, bool reverseOrder = false)
         {
             _service = service;
             _title = title;

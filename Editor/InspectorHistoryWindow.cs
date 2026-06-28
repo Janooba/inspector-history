@@ -18,9 +18,9 @@ namespace VoidState.InspectorHistory.Editor
 
         private HistoryService _history;
         private NavbarView _navbarView;
-        private HistoryListView _favoriteView;
-        private HistoryListView _frequentView;
-        private HistoryListView _historyView;
+        private EntryListView _favoriteView;
+        private EntryListView _frequentView;
+        private EntryListView _entryView;
 
         private Vector2 _scrollPosition;
 
@@ -28,14 +28,20 @@ namespace VoidState.InspectorHistory.Editor
         {
             _history = HistoryService.Instance;
             InitializeViews();
+            Selection.selectionChanged += Repaint;
+        }
+
+        private void OnDisable()
+        {
+            Selection.selectionChanged -= Repaint;
         }
 
         private void InitializeViews()
         {
             _navbarView ??= new NavbarView(_history);
-            _frequentView ??= new HistoryListView(_history, "Frequent");
-            _favoriteView ??= new HistoryListView(_history, "Favourites");
-            _historyView ??= new HistoryListView(_history, "History", HISTORY_MAX / 2);
+            _frequentView ??= new EntryListView(_history, "Frequent");
+            _favoriteView ??= new EntryListView(_history, "Favourites");
+            _entryView ??= new EntryListView(_history, "History", HISTORY_MAX / 2);
         }
 
         private void OnGUI()
@@ -58,7 +64,7 @@ namespace VoidState.InspectorHistory.Editor
                     _frequentView.Draw(_history.FrequentEntries, true);
                 }
 
-                _historyView.Draw(_history.HistoryEntries, true);
+                _entryView.Draw(_history.HistoryEntries, true);
             }
             
             Utilities.DrawSeparator();
