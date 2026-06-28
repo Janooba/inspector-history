@@ -7,7 +7,8 @@ namespace VoidState.InspectorHistory.Editor
     // Useful link for icons https://github.com/halak/unity-editor-icons
     public class InspectorHistoryWindow : EditorWindow
     {
-        private const int HISTORY_MAX = 20;
+        private const int HISTORY_MAX = 10;
+        private const int FREQUENT_MAX = 5;
 
         [MenuItem("VoidState/Inspector History")]
         public static void OpenWindow()
@@ -39,9 +40,9 @@ namespace VoidState.InspectorHistory.Editor
         private void InitializeViews()
         {
             _navbarView ??= new NavbarView(_history);
-            _frequentView ??= new EntryListView(_history, "Frequent");
+            _frequentView ??= new EntryListView(_history, "Frequent", FREQUENT_MAX);
             _favoriteView ??= new EntryListView(_history, "Favourites");
-            _entryView ??= new EntryListView(_history, "History", HISTORY_MAX / 2);
+            _entryView ??= new EntryListView(_history, "History", HISTORY_MAX);
         }
 
         private void OnGUI()
@@ -56,15 +57,15 @@ namespace VoidState.InspectorHistory.Editor
                 
                 if (_history.FavouriteEntries.Count > 0)
                 {
-                    _favoriteView.Draw(_history.FavouriteEntries, true);
+                    _favoriteView.Draw(_history.FavouriteEntries, true, false);
                 }
 
                 if (_history.FrequentEntries.Count > 0)
                 {
-                    _frequentView.Draw(_history.FrequentEntries, true);
+                    _frequentView.Draw(_history.FrequentEntries, true, false);
                 }
 
-                _entryView.Draw(_history.HistoryEntries, true);
+                _entryView.Draw(_history.HistoryEntries, true, false);
             }
             
             Utilities.DrawSeparator();

@@ -7,40 +7,33 @@ namespace VoidState.InspectorHistory.Editor
 {
     public static class EntryView
     {
+        private const int ROW_HEIGHT = 22;
+        
+        private static Color _missingColor;
+        private static Color _selectedColor;
+        
         private static GUIContent _iconStar;
         private static GUIContent _iconStarSelected;
         private static GUIContent _iconWarning;
-        
-        private static Texture2D _highlightTex;
-        private static GUIStyle _highlightRowStyle;
-        
-        private static Texture2D _missingTex;
-        private static GUIStyle _missingStyle;
         
         private static GUIStyle _rowStyle;
         private static GUIStyle _rowButton;
         private static GUIStyle _rowButtonHighlight;
         private static GUIStyle _rowCountStyle;
 
+        static EntryView()
+        {
+            _missingColor = new Color(1f, 0f, 0f, 0.2f);
+            _selectedColor = new Color(0f, 1f, 1f, 0.2f);
+        }
+        
         private static void EnsureStylesInitialized()
         {
-            _highlightTex ??= Utilities.MakeTex(2, 2, new Color(0f, 1f, 1f, 0.2f));
-            _missingTex ??= Utilities.MakeTex(2, 2, new Color(1f, 0f, 0f, 0.2f));
-
             _rowStyle ??= new GUIStyle();
-            _rowStyle.fixedHeight = 22;
-            _highlightRowStyle ??= new GUIStyle(_rowStyle)
-            {
-                normal = { background = _highlightTex }
-            };
-
-            _missingStyle ??= new GUIStyle(_rowStyle)
-            {
-                normal = { background = _missingTex }
-            };
+            _rowStyle.fixedHeight = ROW_HEIGHT;
 
             _rowButton ??= new GUIStyle(EditorStyles.iconButton);
-            _rowButton.fixedHeight = 22;
+            _rowButton.fixedHeight = ROW_HEIGHT;
             _rowButton.alignment = TextAnchor.MiddleCenter;
             _rowButtonHighlight ??= new GUIStyle(_rowButton);
 
@@ -63,11 +56,22 @@ namespace VoidState.InspectorHistory.Editor
         public static void Draw(this HistoryEntry entry, bool isSelected, Action<HistoryEntry> selectedCallback, Action<HistoryEntry> favouriteCallback)
         {
             EnsureStylesInitialized();
+            
+            // Bit of a hack to preemptively get the whole row's width before we lay it out
+            GUILayout.Box(GUIContent.none, GUIStyle.none, GUILayout.Height(0));
+            var rowRect = GUILayoutUtility.GetLastRect();
+            rowRect.height = ROW_HEIGHT;
 
             if (entry.Value == null)
-                GUILayout.BeginHorizontal(_missingStyle);
-            else 
-                GUILayout.BeginHorizontal(isSelected ? _highlightRowStyle : _rowStyle);
+            {
+                EditorGUI.DrawRect(rowRect, _missingColor);
+            }
+            else if (isSelected)
+            {
+                EditorGUI.DrawRect(rowRect, _selectedColor);
+            }
+            
+            GUILayout.BeginHorizontal(_rowStyle);
 
             // Star / Fav
             if (GUILayout.Button(
@@ -112,8 +116,8 @@ namespace VoidState.InspectorHistory.Editor
             
             GUILayout.EndHorizontal();
 
-            int selectablePadding = 26;
             var entryRect = GUILayoutUtility.GetLastRect();
+            int selectablePadding = 26;
             entryRect.x += selectablePadding;
             entryRect.width -= selectablePadding;
 

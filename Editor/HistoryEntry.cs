@@ -2,7 +2,6 @@ using System;
 using UnityEditor;
 using UnityEditor.Search;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 namespace VoidState.InspectorHistory.Editor
@@ -28,10 +27,13 @@ namespace VoidState.InspectorHistory.Editor
         public string Path = "";
         public string Name = "";
         public string Type = "";
+        public string GlobalId;
         public int Uses;
         public bool IsFavourite;
         public bool IsPersistentAsset;
         public string SceneName = "";
+
+        public bool IsUnresolved => Value == null;
 
         public HistoryEntry(Object value)
         {
@@ -40,6 +42,12 @@ namespace VoidState.InspectorHistory.Editor
             IsFavourite = false;
         }
 
+        public GlobalObjectId ResolveGlobalId()
+        {
+            GlobalObjectId.TryParse(GlobalId, out var id);
+            return id;
+        }
+        
         public void UpdateMetadata()
         {
             if (Value == null) return;
@@ -59,23 +67,16 @@ namespace VoidState.InspectorHistory.Editor
 
             Name = Value.name;
             Type = Value.GetType().Name;
+            GlobalId = GlobalObjectId.GetGlobalObjectIdSlow(Value).ToString();
         }
 
         public void TryGetReference()
         {
-            if (IsPersistentAsset)
+            if (!_value && GlobalObjectId.TryParse(GlobalId, out var id))
             {
-                _value = AssetDatabase.LoadAssetAtPath<Object>(Path);
+                _value = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(id);   
             }
-            else
-            {
-                var scene = SceneManager.GetSceneByPath(SceneName);
-                if (scene != null && scene.isLoaded)
-                {
-                    _value = GameObject.Find(Path);
-                }
-            }
-            
+
             if (_value) UpdateMetadata();
         }
         

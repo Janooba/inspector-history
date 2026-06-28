@@ -35,7 +35,7 @@ namespace VoidState.InspectorHistory.Editor
             _isExpanded = EditorPrefs.GetBool($"{Utilities.PREFS_PREFIX}.{_title}Expanded", true);
         }
 
-        public void Draw(List<HistoryEntry> history, bool showSelected)
+        public void Draw(List<HistoryEntry> history, bool showSelected, bool showMissing)
         {
             EditorGUILayout.BeginVertical();
 
@@ -55,17 +55,30 @@ namespace VoidState.InspectorHistory.Editor
             
             if (history.Count > 0)
             {
+                int displayed = 0;
                 if (_reverseOrder)
                 {
-                    for (int i = Math.Min(history.Count - 1, _maxVisible); i >= 0; i--)
-                        history[i].Draw(showSelected && history[i].Equals(_service.SelectedEntry), 
+                    for (int i = history.Count - 1; i >= 0; i--)
+                    {
+                        if (displayed > _maxVisible) break;
+                        if (history[i].IsUnresolved && !showMissing) continue;
+                        
+                        history[i].Draw(showSelected && history[i].Equals(_service.SelectedEntry),
                             _service.SelectHistoryItem, _service.ToggleFavourite);
+                        displayed++;
+                    }
                 }
                 else
                 {
                     for (int i = 0; i < Math.Min(history.Count, _maxVisible); i++)
-                        history[i].Draw(showSelected && history[i].Equals(_service.SelectedEntry), 
+                    {
+                        if (displayed > _maxVisible) break;
+                        if (history[i].IsUnresolved && !showMissing) continue;
+                        
+                        history[i].Draw(showSelected && history[i].Equals(_service.SelectedEntry),
                             _service.SelectHistoryItem, _service.ToggleFavourite);
+                        displayed++;
+                    }
                 }
             }
             else

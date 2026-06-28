@@ -4,6 +4,7 @@ using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using Sirenix.Serialization;
+using Object = UnityEngine.Object;
 using SerializationUtility = Sirenix.Serialization.SerializationUtility;
 
 namespace VoidState.InspectorHistory.Editor
@@ -25,8 +26,6 @@ namespace VoidState.InspectorHistory.Editor
         {
             _instance = new HistoryService();
         }
-        
-        private const int FREQUENT_MAX = 5;
         
         /// True if navigation was triggered by this toolset and not a user selecting something.
         /// Used to refrain from updating the history while navigating.
@@ -80,7 +79,10 @@ namespace VoidState.InspectorHistory.Editor
                 if (_currentHistoryIndex > 0)
                 {
                     // If you're in the past, we need to drop the old future for the new future
+                    // Instead of removing entries I just move them to the back so we can keep their records
+                    var temp = _rawHistory.GetRange(0, _currentHistoryIndex);
                     _rawHistory.RemoveRange(0, _currentHistoryIndex);
+                    _rawHistory.AddRange(temp);
                 }
 
                 var historyEntry = _rawHistory.FirstOrDefault(x => x.Value == activeObject) ?? new HistoryEntry(activeObject);
@@ -107,7 +109,7 @@ namespace VoidState.InspectorHistory.Editor
         {
             _rawFrequent = _rawHistory.OrderByDescending(x => x.Uses)
                 .Where(x => !x.IsFavourite)
-                .Take(FREQUENT_MAX).ToList();
+                .ToList();
         }
         
         #region Action Callbacks
@@ -190,9 +192,19 @@ namespace VoidState.InspectorHistory.Editor
                     // Deserialize using Sirenix's binary format
                     _rawHistory = SerializationUtility.DeserializeValue<List<HistoryEntry>>(serializedData, DataFormat.Binary);
 
-                    foreach (var entry in _rawHistory)
+                    // Resolve ObjectIds into their respective object
+                    // This is done a bit weirdly like this for performance.
+                    // It's a slow process so we want to resolve them in bulk.
+                    var objectIdArray = _rawHistory
+                        .Select(x => x.ResolveGlobalId())
+                        .ToArray();
+
+                    Object[] resolvedObjects = new Object[objectIdArray.Length];
+                    GlobalObjectId.GlobalObjectIdentifiersToObjectsSlow(objectIdArray, resolvedObjects);
+
+                    for (int i = 0; i < _rawHistory.Count; i++)
                     {
-                        entry.TryGetReference();
+                        _rawHistory[i].Value = resolvedObjects[i];
                     }
                     
                     // Initialize favorites list from history items
