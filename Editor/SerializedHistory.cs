@@ -18,7 +18,7 @@ namespace VoidState.InspectorHistory.Editor
                     {
                         // None found, we must create it
                         _instance = CreateInstance<SerializedHistory>();
-                        AssetDatabase.CreateAsset(_instance, $"{Utilities.PACKAGE_PATH}/SerializedHistory.asset");
+                        AssetDatabase.CreateAsset(_instance, $"Assets/Resources/SerializedHistory.asset");
                         AssetDatabase.SaveAssets();
                     }
                     else
