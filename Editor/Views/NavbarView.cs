@@ -6,7 +6,7 @@ namespace VoidState.InspectorHistory.Editor
 {
     public class NavbarView
     {
-        private const int NAV_BTN_HEIGHT = 25;
+        private const int NAV_BTN_HEIGHT = 20;
         private const int NAV_BTN_WIDTH = 30;
 
         private HistoryService _service;
@@ -14,8 +14,8 @@ namespace VoidState.InspectorHistory.Editor
         public NavbarView(HistoryService service)
         {
             _service = service;
-            _iconBack = EditorGUIUtility.IconContent("back@2x");
-            _iconForward = EditorGUIUtility.IconContent("forward@2x");
+            _iconBack = EditorGUIUtility.IconContent("back");
+            _iconForward = EditorGUIUtility.IconContent("forward");
         }
         
         private GUIContent _iconBack;
@@ -35,8 +35,6 @@ namespace VoidState.InspectorHistory.Editor
 
             using (new GUILayout.HorizontalScope())
             {
-                GUILayout.Label($"History Size: {_service.HistoryEntries.Count}", GUILayout.Height(NAV_BTN_HEIGHT));
-                
                 EditorGUI.BeginDisabledGroup(!_service.CanGoBack);
                 if (GUILayout.Button(_iconBack, backButtonStyle, GUILayout.Height(NAV_BTN_HEIGHT), GUILayout.Width(NAV_BTN_WIDTH)))
                 {
@@ -49,7 +47,6 @@ namespace VoidState.InspectorHistory.Editor
                 {
                     _service.GoForward();
                 }
-
                 EditorGUI.EndDisabledGroup();
             }
         }

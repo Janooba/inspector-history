@@ -7,8 +7,8 @@ namespace VoidState.InspectorHistory.Editor
     // Useful link for icons https://github.com/halak/unity-editor-icons
     public class InspectorHistoryWindow : EditorWindow
     {
-        private const int HISTORY_MAX = 10;
-        private const int FREQUENT_MAX = 5;
+        public const int HISTORY_MAX = 10;
+        public const int FREQUENT_MAX = 5;
 
         [MenuItem("VoidState/Inspector History")]
         public static void OpenWindow()
@@ -49,7 +49,7 @@ namespace VoidState.InspectorHistory.Editor
         {
             InitializeViews();
             
-            _navbarView.Draw();
+            //_navbarView.Draw();
 
             using (var scrollView = new EditorGUILayout.ScrollViewScope(_scrollPosition, GUILayout.ExpandWidth(false)))
             {
@@ -65,16 +65,21 @@ namespace VoidState.InspectorHistory.Editor
                     _frequentView.Draw(_history.FrequentEntries, true, false);
                 }
 
-                _entryView.Draw(_history.HistoryEntries, true, false);
+                _entryView.Draw(_history.DisplayedHistoryEntries, true, false);
             }
-            
-            Utilities.DrawSeparator();
 
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Clear")) _history.ClearHistory();
-            if (GUILayout.Button("Save")) _history.SaveHistoryToEditorPrefs();
-            if (GUILayout.Button("Load")) _history.LoadHistoryFromEditorPrefs();
-            EditorGUILayout.EndHorizontal();
+            GUIStyle debugBoxStyle = new GUIStyle("LODBlackBox");
+            debugBoxStyle.margin = new RectOffset();
+            
+            using (new EditorGUILayout.VerticalScope(debugBoxStyle))
+            {
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Clear")) _history.ClearHistory();
+                if (GUILayout.Button("Save")) _history.SaveHistoryToEditorPrefs();
+                if (GUILayout.Button("Load")) _history.LoadHistoryFromEditorPrefs();
+                EditorGUILayout.EndHorizontal();
+                GUILayout.Label($"History Size: {_history.HistoryEntries.Count}");
+            }
         }
     }
 }

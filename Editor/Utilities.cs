@@ -51,9 +51,9 @@ namespace VoidState.InspectorHistory.Editor
             return titleRect;
         }
         
-        public static void DrawSeparator()
+        public static void DrawSeparator(float padding = 10)
         {
-            var spaceRect = EditorGUILayout.GetControlRect(false, 10);
+            var spaceRect = EditorGUILayout.GetControlRect(false, padding);
             var separatorRect = new Rect(spaceRect);
             separatorRect.height = 2;
             separatorRect.y = spaceRect.center.y;

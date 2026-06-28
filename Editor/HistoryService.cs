@@ -34,11 +34,14 @@ namespace VoidState.InspectorHistory.Editor
         /// Where we are in the current history. 0 index is most recent, 1 is last, 2 is one before last, etc.
         private int _currentHistoryIndex = 0;
         
-        public HistoryEntry SelectedEntry => _currentHistoryIndex > -1 && _rawHistory.Count > 0 ? _rawHistory[_currentHistoryIndex] : null;
+        public HistoryEntry SelectedEntry => _currentHistoryIndex > -1 && _visibleHistory.Count > 0 ? _visibleHistory[_currentHistoryIndex] : null;
         
         // History
         private List<HistoryEntry> _rawHistory = new List<HistoryEntry>();
         public List<HistoryEntry> HistoryEntries => _rawHistory;
+        
+        private List<HistoryEntry> _visibleHistory = new List<HistoryEntry>();
+        public List<HistoryEntry> DisplayedHistoryEntries => _visibleHistory;
         
         // Favourites
         private List<HistoryEntry> _rawFavourites = new List<HistoryEntry>();
@@ -48,8 +51,8 @@ namespace VoidState.InspectorHistory.Editor
         private List<HistoryEntry> _rawFrequent = new List<HistoryEntry>();
         public List<HistoryEntry> FrequentEntries => _rawFrequent;
         
-        public bool CanGoBack => _rawHistory.Count > 1 && _currentHistoryIndex < _rawHistory.Count - 1 && _currentHistoryIndex >= 0;
-        public bool CanGoForward => _currentHistoryIndex >= 0;
+        public bool CanGoBack => _visibleHistory.Count > 1 && _currentHistoryIndex < _visibleHistory.Count - 1 && _currentHistoryIndex >= 0;
+        public bool CanGoForward => _currentHistoryIndex > 0;
         
         public HistoryService()
         {
@@ -80,7 +83,7 @@ namespace VoidState.InspectorHistory.Editor
                 {
                     // If you're in the past, we need to drop the old future for the new future
                     // Instead of removing entries I just move them to the back so we can keep their records
-                    var temp = _rawHistory.GetRange(0, _currentHistoryIndex);
+                    var temp = _visibleHistory.GetRange(0, _currentHistoryIndex);
                     _rawHistory.RemoveRange(0, _currentHistoryIndex);
                     _rawHistory.AddRange(temp);
                 }
@@ -93,6 +96,7 @@ namespace VoidState.InspectorHistory.Editor
                 _rawHistory.Insert(0, historyEntry);
 
                 UpdateFrequent();
+                UpdateVisibleHistory();
 
                 _currentHistoryIndex = 0;
             }
@@ -111,6 +115,13 @@ namespace VoidState.InspectorHistory.Editor
                 .Where(x => !x.IsFavourite)
                 .ToList();
         }
+
+        private void UpdateVisibleHistory()
+        {
+            _visibleHistory = _rawHistory
+                .Where(x => !x.IsUnresolved)
+                .ToList();
+        }
         
         #region Action Callbacks
         public void GoBack()
@@ -120,7 +131,7 @@ namespace VoidState.InspectorHistory.Editor
             _currentHistoryIndex++;
             _navigateFlag = true;
 
-            Selection.SetActiveObjectWithContext(_rawHistory[_currentHistoryIndex].Value, null);
+            Selection.SetActiveObjectWithContext(_visibleHistory[_currentHistoryIndex].Value, null);
         }
 
         public void GoForward()
@@ -130,18 +141,23 @@ namespace VoidState.InspectorHistory.Editor
             _currentHistoryIndex--;
             _navigateFlag = true;
 
-            Selection.SetActiveObjectWithContext(_rawHistory[_currentHistoryIndex].Value, null);
+            Selection.SetActiveObjectWithContext(_visibleHistory[_currentHistoryIndex].Value, null);
         }
         
         public void SelectHistoryItem(HistoryEntry historyItem)
         {
-            int index = _rawHistory.IndexOf(historyItem);
+            int index = _visibleHistory.IndexOf(historyItem);
             if (index == _currentHistoryIndex) return;
+
+            if (index < InspectorHistoryWindow.HISTORY_MAX)
+            {
+                _currentHistoryIndex = index;
+                _navigateFlag = true;
+            }
             
-            _currentHistoryIndex = index;
-            _navigateFlag = true;
             historyItem.Uses++;
             UpdateFrequent();
+            UpdateVisibleHistory();
             Selection.SetActiveObjectWithContext(historyItem.Value, null);
         }
         
@@ -159,6 +175,7 @@ namespace VoidState.InspectorHistory.Editor
             }
 
             UpdateFrequent();
+            UpdateVisibleHistory();
         }
         #endregion
         
@@ -210,8 +227,9 @@ namespace VoidState.InspectorHistory.Editor
                     // Initialize favorites list from history items
                     _rawFavourites = _rawHistory.Where(x => x.IsFavourite).ToList();
                     
-                    // Initialize frequent list
+                    // Initialize other lists
                     UpdateFrequent();
+                    UpdateVisibleHistory();
                 }
             }
             catch (Exception ex)
@@ -220,6 +238,8 @@ namespace VoidState.InspectorHistory.Editor
                 // Initialize empty lists on failure
                 _rawHistory = new List<HistoryEntry>();
                 _rawFavourites = new List<HistoryEntry>();
+                _visibleHistory = new List<HistoryEntry>();
+                _rawFrequent = new List<HistoryEntry>();
             }
         }
         
@@ -228,6 +248,7 @@ namespace VoidState.InspectorHistory.Editor
             _rawFavourites.Clear();
             _rawHistory.Clear();
             _rawFrequent.Clear();
+            _visibleHistory.Clear();
             _currentHistoryIndex = 0;
         }
         #endregion
