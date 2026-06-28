@@ -10,7 +10,7 @@ namespace VoidState.InspectorHistory.Editor
         public const int HISTORY_MAX = 10;
         public const int FREQUENT_MAX = 5;
 
-        [MenuItem("VoidState/Inspector History")]
+        [MenuItem("Tools/VoidState/Inspector History")]
         public static void OpenWindow()
         {
             var wnd = GetWindow<InspectorHistoryWindow>();
@@ -75,8 +75,8 @@ namespace VoidState.InspectorHistory.Editor
             {
                 EditorGUILayout.BeginHorizontal();
                 if (GUILayout.Button("Clear")) _history.ClearHistory();
-                if (GUILayout.Button("Save")) _history.SaveHistoryToEditorPrefs();
-                if (GUILayout.Button("Load")) _history.LoadHistoryFromEditorPrefs();
+                if (GUILayout.Button("Save")) _history.SaveHistoryToAsset();
+                if (GUILayout.Button("Load")) _history.LoadHistoryFromAsset();
                 EditorGUILayout.EndHorizontal();
                 GUILayout.Label($"History Size: {_history.HistoryEntries.Count}");
             }

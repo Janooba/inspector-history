@@ -56,13 +56,13 @@ namespace VoidState.InspectorHistory.Editor
         
         public HistoryService()
         {
-            LoadHistoryFromEditorPrefs();
+            LoadHistoryFromAsset();
             Selection.selectionChanged += OnSelectionChanged;
         }
         
         public void Dispose()
         {
-            SaveHistoryToEditorPrefs();
+            SaveHistoryToAsset();
             Selection.selectionChanged -= OnSelectionChanged;
         }
         
@@ -106,7 +106,7 @@ namespace VoidState.InspectorHistory.Editor
             }
 
             // Save history to EditorPrefs
-            SaveHistoryToEditorPrefs();
+            SaveHistoryToAsset();
         }
         
         private void UpdateFrequent()
@@ -180,67 +180,38 @@ namespace VoidState.InspectorHistory.Editor
         #endregion
         
         #region Save / Load
-        public void SaveHistoryToEditorPrefs()
+        public void SaveHistoryToAsset()
         {
-            try
-            {
-                byte[] serializedData = SerializationUtility.SerializeValue(_rawHistory, DataFormat.Binary);
-
-                // Convert to base64 string for EditorPrefs storage
-                string base64String = Convert.ToBase64String(serializedData);
-                EditorPrefs.SetString($"{Utilities.PREFS_PREFIX}.history", base64String);
-            }
-            catch (Exception ex)
-            {
-                Debug.LogError($"Failed to save history to EditorPrefs: {ex.Message}");
-            }
+            SerializedHistory.Instance.history = _rawHistory;
+            EditorUtility.SetDirty(SerializedHistory.Instance);
+            AssetDatabase.SaveAssetIfDirty(SerializedHistory.Instance);
         }
 
-        public void LoadHistoryFromEditorPrefs()
+        public void LoadHistoryFromAsset()
         {
-            try
-            {
-                string base64String = EditorPrefs.GetString($"{Utilities.PREFS_PREFIX}.history", "");
-                if (!string.IsNullOrEmpty(base64String))
-                {
-                    // Convert base64 string back to byte array
-                    byte[] serializedData = Convert.FromBase64String(base64String);
-
-                    // Deserialize using Sirenix's binary format
-                    _rawHistory = SerializationUtility.DeserializeValue<List<HistoryEntry>>(serializedData, DataFormat.Binary);
-
-                    // Resolve ObjectIds into their respective object
-                    // This is done a bit weirdly like this for performance.
-                    // It's a slow process so we want to resolve them in bulk.
-                    var objectIdArray = _rawHistory
-                        .Select(x => x.ResolveGlobalId())
-                        .ToArray();
-
-                    Object[] resolvedObjects = new Object[objectIdArray.Length];
-                    GlobalObjectId.GlobalObjectIdentifiersToObjectsSlow(objectIdArray, resolvedObjects);
-
-                    for (int i = 0; i < _rawHistory.Count; i++)
-                    {
-                        _rawHistory[i].Value = resolvedObjects[i];
-                    }
+            _rawHistory = SerializedHistory.Instance.history;
                     
-                    // Initialize favorites list from history items
-                    _rawFavourites = _rawHistory.Where(x => x.IsFavourite).ToList();
-                    
-                    // Initialize other lists
-                    UpdateFrequent();
-                    UpdateVisibleHistory();
-                }
-            }
-            catch (Exception ex)
+            // Resolve ObjectIds into their respective object
+            // This is done a bit weirdly like this for performance.
+            // It's a slow process so we want to resolve them in bulk.
+            var objectIdArray = _rawHistory
+                .Select(x => x.ResolveGlobalId())
+                .ToArray();
+
+            Object[] resolvedObjects = new Object[objectIdArray.Length];
+            GlobalObjectId.GlobalObjectIdentifiersToObjectsSlow(objectIdArray, resolvedObjects);
+
+            for (int i = 0; i < _rawHistory.Count; i++)
             {
-                Debug.LogError($"Failed to load history from EditorPrefs: {ex.Message}");
-                // Initialize empty lists on failure
-                _rawHistory = new List<HistoryEntry>();
-                _rawFavourites = new List<HistoryEntry>();
-                _visibleHistory = new List<HistoryEntry>();
-                _rawFrequent = new List<HistoryEntry>();
+                _rawHistory[i].Value = resolvedObjects[i];
             }
+                    
+            // Initialize favorites list from history items
+            _rawFavourites = _rawHistory.Where(x => x.IsFavourite).ToList();
+                    
+            // Initialize other lists
+            UpdateFrequent();
+            UpdateVisibleHistory();
         }
         
         public void ClearHistory()
