@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
 using UnityEngine;
@@ -30,7 +31,7 @@ namespace VoidState.InspectorHistory.Editor
         private Action BackClicked;
         private Action ForwardClicked;
         
-        public void Draw(HistoryEntry selectedEntry)
+        public void Draw(List<HistoryEntry> rawHistory, HistoryEntry selectedEntry)
         {
             GUIStyle backButtonStyle = new GUIStyle(EditorStyles.miniButtonLeft)
             {
@@ -51,7 +52,7 @@ namespace VoidState.InspectorHistory.Editor
             {
                 string path = selectedEntry != null ? selectedEntry.Path : "";
                 
-                GUILayout.Label("", GUILayout.Height(NAV_BTN_HEIGHT));
+                GUILayout.Label($"History Size: {rawHistory.Count}", GUILayout.Height(NAV_BTN_HEIGHT));
                 var labelZone = GUILayoutUtility.GetLastRect();
                 
                 //EditorGUI.DrawRect(labelZone, Color.magenta.ChangeAlpha(0.2f));
@@ -60,6 +61,8 @@ namespace VoidState.InspectorHistory.Editor
                 // {
                 //     
                 // }
+                
+                
                 
                 EditorGUI.BeginDisabledGroup(IsBackDisabled());
                 if (GUILayout.Button(_iconBack, backButtonStyle, GUILayout.Height(NAV_BTN_HEIGHT), GUILayout.Width(NAV_BTN_WIDTH)))

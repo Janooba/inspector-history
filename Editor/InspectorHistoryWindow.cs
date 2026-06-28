@@ -12,8 +12,6 @@ namespace VoidState.InspectorHistory.Editor
     // Useful link for icons https://github.com/halak/unity-editor-icons
     public class InspectorHistoryWindow : EditorWindow, IHistoryInteraction
     {
-        public const string PACKAGE_PATH = "Packages/com.voidstate.inspector-history";
-
         private const int HISTORY_MAX = 20;
         private const int FREQUENT_MAX = 5;
 
@@ -41,15 +39,17 @@ namespace VoidState.InspectorHistory.Editor
         private HistoryListView _frequentView;
         private HistoryListView _historyView;
 
-        private bool _stylesReady;
+        private Vector2 _scrollPosition;
 
         private bool ShouldDisableBackButton() => _rawHistory.Count <= 1 || _currentHistoryIndex == _rawHistory.Count - 1 || _currentHistoryIndex < 0;
         private bool ShouldDisableForwardButton() => _currentHistoryIndex <= 0;
 
         protected void OnEnable()
         {
-            _stylesReady = false;
             Selection.selectionChanged += OnSelectionChanged;
+
+            InitializeViews();
+            
             LoadHistoryFromEditorPrefs();
         }
 
@@ -58,9 +58,12 @@ namespace VoidState.InspectorHistory.Editor
             Selection.selectionChanged -= OnSelectionChanged;
         }
 
-        private void InitializeStyles()
+        private void InitializeViews()
         {
-
+            _navbarView ??= new NavbarView(ShouldDisableBackButton, ShouldDisableForwardButton, GoBack, GoForward);
+            _frequentView ??= new HistoryListView("Frequent");
+            _favoriteView ??= new HistoryListView("Favourites");
+            _historyView ??= new HistoryListView("History", HISTORY_MAX / 2);
         }
 
         private void OnSelectionChanged()
@@ -127,29 +130,29 @@ namespace VoidState.InspectorHistory.Editor
 
         private void OnGUI()
         {
-            _navbarView ??= new NavbarView(ShouldDisableBackButton, ShouldDisableForwardButton, GoBack, GoForward);
-            _frequentView ??= new HistoryListView("Frequent");
-            _favoriteView ??= new HistoryListView("Favourites");
-            _historyView ??= new HistoryListView("History", HISTORY_MAX / 2);
-
-            InitializeStyles();
+            InitializeViews();
 
             var selectedEntry = _currentHistoryIndex > -1 && _rawHistory.Count > 0 ? _rawHistory[_currentHistoryIndex] : null;
             
-            _navbarView.Draw(selectedEntry);
-            
-            if (_rawFavorites.Count > 0)
+            _navbarView.Draw(_rawHistory, selectedEntry);
+
+            using (var scrollView = new EditorGUILayout.ScrollViewScope(_scrollPosition))
             {
-                _favoriteView.Draw(_rawFavorites, selectedEntry, this);
+                _scrollPosition = scrollView.scrollPosition;
+                
+                if (_rawFavorites.Count > 0)
+                {
+                    _favoriteView.Draw(_rawFavorites, selectedEntry, this);
+                }
+
+                if (_rawFrequent.Count > 0)
+                {
+                    _frequentView.Draw(_rawFrequent, selectedEntry, this);
+                }
+
+                _historyView.Draw(_rawHistory, _currentHistoryIndex, this);
             }
             
-            if (_rawFrequent.Count > 0)
-            {
-                _frequentView.Draw(_rawFrequent, selectedEntry, this);
-            }
-
-            _historyView.Draw(_rawHistory, _currentHistoryIndex, this);
-
             Utilities.DrawSeparator();
 
             EditorGUILayout.BeginHorizontal();
@@ -210,7 +213,7 @@ namespace VoidState.InspectorHistory.Editor
 
                 // Convert to base64 string for EditorPrefs storage
                 string base64String = Convert.ToBase64String(serializedData);
-                EditorPrefs.SetString("inspector_history.history", base64String);
+                EditorPrefs.SetString($"{Utilities.PREFS_PREFIX}.history", base64String);
             }
             catch (Exception ex)
             {
@@ -222,7 +225,7 @@ namespace VoidState.InspectorHistory.Editor
         {
             try
             {
-                string base64String = EditorPrefs.GetString("inspector_history.history", "");
+                string base64String = EditorPrefs.GetString($"{Utilities.PREFS_PREFIX}.history", "");
                 if (!string.IsNullOrEmpty(base64String))
                 {
                     // Convert base64 string back to byte array

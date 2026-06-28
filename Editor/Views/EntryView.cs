@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -48,13 +49,13 @@ namespace VoidState.InspectorHistory.Editor
 
             if (_iconStar == null)
             {
-                Texture favoriteIcon = AssetDatabase.LoadAssetAtPath<Texture>($"{InspectorHistoryWindow.PACKAGE_PATH}/Editor/Images/icon_favorite.png");
+                Texture favoriteIcon = AssetDatabase.LoadAssetAtPath<Texture>($"{Utilities.PACKAGE_PATH}/Editor/Images/icon_favorite.png");
                 _iconStar = new GUIContent(favoriteIcon);
             }
 
             if (_iconStarSelected == null)
             {
-                Texture favoriteIconOn = AssetDatabase.LoadAssetAtPath<Texture>($"{InspectorHistoryWindow.PACKAGE_PATH}/Editor/Images/icon_favorite_on.png");
+                Texture favoriteIconOn = AssetDatabase.LoadAssetAtPath<Texture>($"{Utilities.PACKAGE_PATH}/Editor/Images/icon_favorite_on.png");
                 _iconStarSelected = new GUIContent(favoriteIconOn);
             }
         }
@@ -76,15 +77,35 @@ namespace VoidState.InspectorHistory.Editor
                 favouriteCallback?.Invoke(entry);
             }
 
-            GUILayout.Space(6);
+            Utilities.DrawVerticalSeparator();
 
-            // Icon and label
-            var icon = entry.Value != null ? AssetPreview.GetMiniThumbnail(entry.Value) : EditorGUIUtility.IconContent("_Help@2x").image;
+            // Location icon
+            var locContent = entry.IsPersistentAsset
+                ? EditorGUIUtility.IconContent("Folder Icon")
+                : EditorGUIUtility.IconContent("SceneAsset Icon");
             
-            var iconRect = EditorGUILayout.GetControlRect(false, GUILayout.Width(19), GUILayout.Height(19));
-            GUI.DrawTexture(iconRect, icon);
+            locContent.tooltip = entry.IsPersistentAsset
+                ? Path.GetDirectoryName(entry.Path)
+                : Path.GetFileNameWithoutExtension(entry.SceneName);
             
-            GUILayout.Label(entry.Name);
+            var locIconRect = EditorGUILayout.GetControlRect(false, GUILayout.Width(19), GUILayout.Height(19));
+            if (GUI.Button(locIconRect, locContent, GUIStyle.none))
+                EditorGUIUtility.PingObject(entry.Value);
+            
+            // Object thumbnail
+            var thumbnailContent = new GUIContent
+            {
+                image = entry.Value != null ? AssetPreview.GetMiniThumbnail(entry.Value) : EditorGUIUtility.IconContent("_Help@2x").image,
+                tooltip = entry.Type
+            };
+
+            var thumbRect = EditorGUILayout.GetControlRect(false, GUILayout.Width(19), GUILayout.Height(19));
+            if (GUI.Button(thumbRect, thumbnailContent, GUIStyle.none))
+                EditorGUIUtility.PingObject(entry.Value);
+
+            Utilities.DrawVerticalSeparator();
+            
+            GUILayout.Label(new GUIContent(entry.Name, $"{entry.Type}"));
 
             var textRect = GUILayoutUtility.GetLastRect();
             GUI.Label(textRect, entry.Uses.ToString(), _rowCountStyle);
@@ -96,7 +117,7 @@ namespace VoidState.InspectorHistory.Editor
             entryRect.x += selectablePadding;
             entryRect.width -= selectablePadding;
 
-            if (entry.Value != null && GUI.Button(entryRect, new GUIContent("", $"{entry.Type}"), GUIStyle.none))
+            if (entry.Value != null && GUI.Button(entryRect, GUIContent.none, GUIStyle.none))
             {
                 selectedCallback?.Invoke(entry);
             }
