@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using Object = System.Object;
 
 namespace VoidState.InspectorHistory.Editor
 {
     public class HistoryListView
     {
+        private HistoryService _service;
         private string _title;
         private readonly int _maxVisible;
         private readonly bool _reverseOrder;
@@ -25,34 +27,16 @@ namespace VoidState.InspectorHistory.Editor
             }
         }
 
-        public HistoryListView(string title, int maxVisible = int.MaxValue, bool reverseOrder = false)
+        public HistoryListView(HistoryService service, string title, int maxVisible = int.MaxValue, bool reverseOrder = false)
         {
+            _service = service;
             _title = title;
             _maxVisible = maxVisible;
             _reverseOrder = reverseOrder;
             _isExpanded = EditorPrefs.GetBool($"{Utilities.PREFS_PREFIX}.{_title}Expanded", true);
         }
 
-        public void Draw(List<HistoryEntry> history, IHistoryInteraction interaction)
-        {
-            Draw_Internal(history, interaction, null);
-        }
-
-        public void Draw(List<HistoryEntry> history, HistoryEntry selectedEntry, IHistoryInteraction interaction)
-        {
-            if (selectedEntry == null)
-                Draw_Internal(history, interaction, null);
-            else
-                Draw_Internal(history, interaction, (entry, index) => entry.Equals(selectedEntry));
-        }
-
-        public void Draw(List<HistoryEntry> history, int selectedIndex, IHistoryInteraction interaction)
-        {
-            Draw_Internal(history, interaction, (entry, index) => index == selectedIndex);
-        }
-
-        private delegate bool TestSelection(HistoryEntry entry, int index);
-        private void Draw_Internal(List<HistoryEntry> history, IHistoryInteraction interaction, TestSelection selectionTest = null)
+        public void Draw(List<HistoryEntry> history, bool showSelected)
         {
             EditorGUILayout.BeginVertical();
 
@@ -75,16 +59,14 @@ namespace VoidState.InspectorHistory.Editor
                 if (_reverseOrder)
                 {
                     for (int i = Math.Min(history.Count - 1, _maxVisible); i >= 0; i--)
-                        history[i].Draw(selectionTest?.Invoke(history[i], i) ?? false, 
-                            (entry) => interaction.SelectHistoryItem(entry),
-                            (entry) => interaction.ToggleFavourite(entry));
+                        history[i].Draw(showSelected && history[i].Equals(_service.SelectedEntry), 
+                            _service.SelectHistoryItem, _service.ToggleFavourite);
                 }
                 else
                 {
                     for (int i = 0; i < Math.Min(history.Count, _maxVisible); i++)
-                        history[i].Draw(selectionTest?.Invoke(history[i], i) ?? false, 
-                            (entry) => interaction.SelectHistoryItem(entry),
-                            (entry) => interaction.ToggleFavourite(entry));
+                        history[i].Draw(showSelected && history[i].Equals(_service.SelectedEntry), 
+                            _service.SelectHistoryItem, _service.ToggleFavourite);
                 }
             }
             else
