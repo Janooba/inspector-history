@@ -16,7 +16,7 @@ The Inspector History package logs all inspector selections and provides easy na
 - Automatically logs all inspector selections in Unity Editor
 - Maintains a chronological history of your selection actions
 - Tracks selection frequency for frequently used objects
-- Preserves object references across editor sessions using EditorPrefs
+- Preserves object references across editor sessions using a ScriptableObject in Resources
 
 <img width="263" height="185" alt="navigation" src="https://github.com/user-attachments/assets/28924597-a243-4779-b576-925ecfca5b1c" />
 
@@ -60,16 +60,9 @@ The Inspector History package logs all inspector selections and provides easy na
 ## Technical Details
 
 ### Data Persistence
-- History is saved to EditorPrefs between editor sessions
-- Uses Sirenix Serialization for data handling
+- History and settings are saved to a ScriptableObject in Resources between editor sessions
 - Maintains object references using Unity's new `GlobalObjectId` system
 
 ## Requirements
 
 - Unity 6000 or later
-- Sirenix Odin Serializer
-
-## To Do
-
-- Migrate Editorprefs to an in-project config file. This is to allow different projects to have their own history and settings
-- Try to eliminate Odin Serializer dependency
