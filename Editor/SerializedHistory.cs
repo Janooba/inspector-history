@@ -19,6 +19,8 @@ namespace VoidState.InspectorHistory.Editor
                     {
                         // None found, we must create it
                         _instance = CreateInstance<SerializedHistory>();
+                        if (!AssetDatabase.IsValidFolder($"Assets/Resources"))
+                            AssetDatabase.CreateFolder("Assets", "Resources");
                         AssetDatabase.CreateAsset(_instance, $"Assets/Resources/SelectionHistoryConfig.asset");
                         AssetDatabase.SaveAssets();
                     }
