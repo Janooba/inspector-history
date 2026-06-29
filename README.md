@@ -4,6 +4,8 @@
 
 A Unity Editor package that provides comprehensive inspector selection history tracking with navigation capabilities.
 
+<img width="800" height="935" alt="example_2" src="https://github.com/user-attachments/assets/21f3f94d-bfd6-4502-b740-f0edba419cb8" />
+
 ## Overview
 
 The Inspector History package logs all inspector selections and provides easy navigation through your selection history. It offers both a toolbar navigation interface and a dedicated window for detailed history management.
@@ -16,10 +18,14 @@ The Inspector History package logs all inspector selections and provides easy na
 - Tracks selection frequency for frequently used objects
 - Preserves object references across editor sessions using EditorPrefs
 
+<img width="263" height="185" alt="navigation" src="https://github.com/user-attachments/assets/28924597-a243-4779-b576-925ecfca5b1c" />
+
 ### 2. Navigation Controls
 - **Inspector Toolbar Buttons**: Back and forward navigation buttons integrated directly into the Unity inspector toolbar
 - **Quick Navigation**: Click through history directly to select objects
 - **Smart Navigation**: Automatically manages history when navigating forward/backward
+
+<img width="330" height="374" alt="Unity_KUWkF4vMQw" src="https://github.com/user-attachments/assets/4f21172a-e14a-4ac8-9bb1-88421f57b997" />
 
 ### 3. History Window
 - Dedicated window accessible via `VoidState/Inspector History` menu
