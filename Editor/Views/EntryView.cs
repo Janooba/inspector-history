@@ -111,8 +111,11 @@ namespace VoidState.InspectorHistory.Editor
             
             GUILayout.Label(new GUIContent(entry.Name, $"{entry.Type}"));
 
-            var textRect = GUILayoutUtility.GetLastRect();
-            GUI.Label(textRect, entry.Uses.ToString(), _rowCountStyle);
+            if (SerializedHistory.Instance.showDebug)
+            {
+                var textRect = GUILayoutUtility.GetLastRect();
+                GUI.Label(textRect, entry.Uses.ToString(), _rowCountStyle);
+            }
             
             GUILayout.EndHorizontal();
 

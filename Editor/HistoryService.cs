@@ -2,10 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
-using UnityEngine;
-using Sirenix.Serialization;
 using Object = UnityEngine.Object;
-using SerializationUtility = Sirenix.Serialization.SerializationUtility;
 
 namespace VoidState.InspectorHistory.Editor
 {

@@ -1,6 +1,6 @@
 {
   "name": "com.voidstate.inspector-history",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "VoidState Inspector History",
   "description": "A panel that logs inspector selection history for easy back and forth navigation. Users can also favorite certain objects.",
   "unity": "6000.3",

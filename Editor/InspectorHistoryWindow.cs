@@ -48,17 +48,12 @@ namespace VoidState.InspectorHistory.Editor
         private void OnGUI()
         {
             InitializeViews();
-            
-            //_navbarView.Draw();
 
             using (var scrollView = new EditorGUILayout.ScrollViewScope(_scrollPosition, GUILayout.ExpandWidth(false)))
             {
                 _scrollPosition = scrollView.scrollPosition;
                 
-                if (_history.FavouriteEntries.Count > 0)
-                {
-                    _favoriteView.Draw(_history.FavouriteEntries, true, false);
-                }
+                _favoriteView.Draw(_history.FavouriteEntries, true, false);
 
                 if (_history.FrequentEntries.Count > 0)
                 {
@@ -66,19 +61,6 @@ namespace VoidState.InspectorHistory.Editor
                 }
 
                 _entryView.Draw(_history.DisplayedHistoryEntries, true, false);
-            }
-
-            GUIStyle debugBoxStyle = new GUIStyle("LODBlackBox");
-            debugBoxStyle.margin = new RectOffset();
-            
-            using (new EditorGUILayout.VerticalScope(debugBoxStyle))
-            {
-                EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("Clear")) _history.ClearHistory();
-                if (GUILayout.Button("Save")) _history.SaveHistoryToAsset();
-                if (GUILayout.Button("Load")) _history.LoadHistoryFromAsset();
-                EditorGUILayout.EndHorizontal();
-                GUILayout.Label($"History Size: {_history.HistoryEntries.Count}");
             }
         }
     }

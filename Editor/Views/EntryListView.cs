@@ -46,16 +46,9 @@ namespace VoidState.InspectorHistory.Editor
                 IsExpanded = isExpanded;
             }
 
-            if (!IsExpanded)
+            int displayed = 0;
+            if (IsExpanded)
             {
-                EditorGUILayout.LabelField("", GUILayout.Height(1));
-                EditorGUILayout.EndVertical();
-                return;
-            }
-            
-            if (history.Count > 0)
-            {
-                int displayed = 0;
                 if (_reverseOrder)
                 {
                     for (int i = history.Count - 1; i >= 0; i--)
@@ -80,12 +73,14 @@ namespace VoidState.InspectorHistory.Editor
                         displayed++;
                     }
                 }
+                
+                if (displayed == 0)
+                {
+                    GUILayout.Label("No history available");
+                }
             }
-            else
-            {
-                GUILayout.Label("No history available");
-            }
-
+            
+            EditorGUILayout.LabelField("", GUILayout.Height(1));
             EditorGUILayout.EndVertical();
         }
     }

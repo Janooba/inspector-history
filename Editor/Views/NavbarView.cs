@@ -33,22 +33,33 @@ namespace VoidState.InspectorHistory.Editor
                 fixedHeight = NAV_BTN_HEIGHT
             };
 
+            // Readonly assets may disable their header which includes this.
+            // We still want to navigate though, so we must override it
+            bool originalEnabledState = GUI.enabled;
+            GUI.enabled = true; 
+            
             using (new GUILayout.HorizontalScope())
             {
-                EditorGUI.BeginDisabledGroup(!_service.CanGoBack);
-                if (GUILayout.Button(_iconBack, backButtonStyle, GUILayout.Height(NAV_BTN_HEIGHT), GUILayout.Width(NAV_BTN_WIDTH)))
+                using (new EditorGUI.DisabledGroupScope(!_service.CanGoBack))
                 {
-                    _service.GoBack();
+                    if (GUILayout.Button(_iconBack, backButtonStyle, GUILayout.Height(NAV_BTN_HEIGHT),
+                            GUILayout.Width(NAV_BTN_WIDTH)))
+                    {
+                        _service.GoBack();
+                    }
                 }
-                EditorGUI.EndDisabledGroup();
 
-                EditorGUI.BeginDisabledGroup(!_service.CanGoForward);
-                if (GUILayout.Button(_iconForward, forwardButtonStyle, GUILayout.Height(NAV_BTN_HEIGHT), GUILayout.Width(NAV_BTN_WIDTH)))
+                using (new EditorGUI.DisabledGroupScope(!_service.CanGoForward))
                 {
-                    _service.GoForward();
+                    if (GUILayout.Button(_iconForward, forwardButtonStyle, GUILayout.Height(NAV_BTN_HEIGHT),
+                            GUILayout.Width(NAV_BTN_WIDTH)))
+                    {
+                        _service.GoForward();
+                    }
                 }
-                EditorGUI.EndDisabledGroup();
             }
+
+            GUI.enabled = originalEnabledState;
         }
     }
 }

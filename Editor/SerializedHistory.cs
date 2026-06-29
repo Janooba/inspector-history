@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -18,7 +19,7 @@ namespace VoidState.InspectorHistory.Editor
                     {
                         // None found, we must create it
                         _instance = CreateInstance<SerializedHistory>();
-                        AssetDatabase.CreateAsset(_instance, $"Assets/Resources/SerializedHistory.asset");
+                        AssetDatabase.CreateAsset(_instance, $"Assets/Resources/SelectionHistoryConfig.asset");
                         AssetDatabase.SaveAssets();
                     }
                     else
@@ -39,6 +40,49 @@ namespace VoidState.InspectorHistory.Editor
             }
         }
 
+        public bool showDebug = false;
+        
+        [HideInInspector]
         public List<HistoryEntry> history = new List<HistoryEntry>();
+
+        [CustomEditor(typeof(SerializedHistory))]
+        public class SerializedHistoryEditor : UnityEditor.Editor
+        {
+            private SerializedHistory _serializedHistory;
+            private SerializedProperty _serializedHistoryListProperty;
+
+            private void OnEnable()
+            {
+                _serializedHistoryListProperty = serializedObject.FindProperty(nameof(history));
+            }
+
+            public override void OnInspectorGUI()
+            {
+                _serializedHistory ??= target as SerializedHistory;
+                base.OnInspectorGUI();
+                
+                DrawDebugPanel();
+            }
+
+            private void DrawDebugPanel()
+            {
+                if (!_serializedHistory.showDebug) return;
+                
+                var service = HistoryService.Instance;
+                
+                GUILayout.Label("Debug Information", EditorStyles.largeLabel);
+                
+                using (new EditorGUI.DisabledGroupScope(true))
+                {
+                    EditorGUILayout.PropertyField(_serializedHistoryListProperty, true);
+                }
+                
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Clear")) service.ClearHistory();
+                if (GUILayout.Button("Save")) service.SaveHistoryToAsset();
+                if (GUILayout.Button("Load")) service.LoadHistoryFromAsset();
+                EditorGUILayout.EndHorizontal();
+            }
+        }
     }
 }
