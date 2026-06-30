@@ -60,6 +60,7 @@ namespace VoidState.InspectorHistory.Editor
         public void Dispose()
         {
             SaveHistoryToAsset();
+            AssetDatabase.SaveAssetIfDirty(SerializedHistory.Instance);
             Selection.selectionChanged -= OnSelectionChanged;
         }
         
@@ -88,6 +89,7 @@ namespace VoidState.InspectorHistory.Editor
                 var historyEntry = _rawHistory.FirstOrDefault(x => x.Value == activeObject) ?? new HistoryEntry(activeObject);
 
                 historyEntry.Uses++;
+                historyEntry.UpdateMetadata();
 
                 _rawHistory.RemoveAll(x => x.Value == activeObject);
                 _rawHistory.Insert(0, historyEntry);
@@ -181,13 +183,13 @@ namespace VoidState.InspectorHistory.Editor
         {
             SerializedHistory.Instance.history = _rawHistory;
             EditorUtility.SetDirty(SerializedHistory.Instance);
-            AssetDatabase.SaveAssetIfDirty(SerializedHistory.Instance);
+            //AssetDatabase.SaveAssetIfDirty(SerializedHistory.Instance);
         }
 
         public void LoadHistoryFromAsset()
         {
             _rawHistory = SerializedHistory.Instance.history;
-                    
+            
             // Resolve ObjectIds into their respective object
             // This is done a bit weirdly like this for performance.
             // It's a slow process so we want to resolve them in bulk.
