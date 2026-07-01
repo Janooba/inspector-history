@@ -81,7 +81,7 @@ namespace VoidState.InspectorHistory.Editor
                 {
                     // If you're in the past, we need to drop the old future for the new future
                     // Instead of removing entries I just move them to the back so we can keep their records
-                    var temp = _visibleHistory.GetRange(0, _currentHistoryIndex);
+                    var temp = _visibleHistory.GetRange(0, Math.Min(_visibleHistory.Count - 1, _currentHistoryIndex));
                     _rawHistory.RemoveRange(0, _currentHistoryIndex);
                     _rawHistory.AddRange(temp);
                 }
