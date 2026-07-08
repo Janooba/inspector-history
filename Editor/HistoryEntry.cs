@@ -53,21 +53,13 @@ namespace VoidState.InspectorHistory.Editor
             if (Value == null) return;
             
             IsPersistentAsset = EditorUtility.IsPersistent(Value);
-                
-            if (!IsPersistentAsset && Value is GameObject activeGameObject)
-            {
-                SceneName = activeGameObject.scene.path;
-                Path = SearchUtils.GetTransformPath(activeGameObject.transform);
-            }
-            else
-            {
-                SceneName = "";
-                Path = SearchUtils.GetObjectPath(Value);
-            }
+            
+            Path = GetObjectPath(Value);
+            SceneName = GetObjectScene(Value);
 
             Name = Value.name;
             Type = Value.GetType().Name;
-            GlobalId = GlobalObjectId.GetGlobalObjectIdSlow(Value).ToString();
+            GlobalId = GetObjectGlobalId(Value);
         }
 
         public void TryGetReference()
@@ -83,23 +75,57 @@ namespace VoidState.InspectorHistory.Editor
         public bool Equals(HistoryEntry other)
         {
             if (other == null) return false;
-            return Equals(Path, other.Path);
+            return Equals(GlobalId, other.GlobalId);
+        }
+
+        public bool Equals(Object other)
+        {
+            if (other == null) return false;
+            return Equals(GlobalId, GetObjectGlobalId(other));
         }
 
         public override bool Equals(object obj)
         {
             if (obj == null) return false;
+            if (obj is Object uObj) return Equals(uObj);
             return obj is HistoryEntry other && Equals(other);
         }
 
         public override int GetHashCode()
         {
-            return (Path != null ? Path.GetHashCode() : 0);
+            return (GlobalId != null ? GlobalId.GetHashCode() : 0);
         }
 
         public int CompareTo(HistoryEntry other)
         {
             return Uses.CompareTo(other.Uses);
         }
+        
+        #region Static Helpers
+        public static string GetObjectPath(Object value)
+        {
+            if (!EditorUtility.IsPersistent(value) && value is GameObject activeGameObject)
+            {
+                return SearchUtils.GetTransformPath(activeGameObject.transform);
+            }
+
+            return SearchUtils.GetObjectPath(value);
+        }
+
+        public static string GetObjectScene(Object value)
+        {
+            if (!EditorUtility.IsPersistent(value) && value is GameObject activeGameObject)
+            {
+                return activeGameObject.scene.path;
+            }
+
+            return "";
+        }
+
+        public static string GetObjectGlobalId(Object value)
+        {
+            return GlobalObjectId.GetGlobalObjectIdSlow(value).ToString();
+        }
+        #endregion
     }
 }
