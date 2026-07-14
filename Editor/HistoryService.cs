@@ -1,8 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using UnityEditor;
-using UnityEngine;
+using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
 namespace VoidState.InspectorHistory.Editor
@@ -113,16 +114,37 @@ namespace VoidState.InspectorHistory.Editor
         
         private void UpdateFrequent()
         {
-            _rawFrequent = HistoryEntries.OrderByDescending(x => x.Uses)
-                .Where(x => !x.IsFavourite)
-                .ToList();
+            _rawFrequent.Clear();
+            return;
+            
+            // Need to rethink this
+            for (int i = 0; i < InspectorHistoryWindow.FREQUENT_MAX; i++)
+            {
+                if (i >= HistoryEntries.Count) break;
+                
+                var entry = HistoryEntries[i];
+                if (!entry.IsFavourite) continue;
+
+                _rawFrequent.Add(entry);
+            }
         }
 
         private void UpdateVisibleHistory()
         {
-            _visibleHistory = HistoryEntries
-                .Where(x => !x.IsUnresolved)
-                .ToList();
+            _visibleHistory.Clear();
+            for (int i = 0; i < InspectorHistoryWindow.HISTORY_MAX * 2; i++)
+            {
+                if (i >= HistoryEntries.Count) break;
+                
+                var entry = HistoryEntries[i];
+                
+                if (entry.IsUnresolved)
+                {
+                    continue;
+                }
+
+                _visibleHistory.Add(entry);
+            }
         }
         
         #region Action Callbacks

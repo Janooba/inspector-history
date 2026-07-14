@@ -14,7 +14,8 @@ namespace VoidState.InspectorHistory.Editor
         {
             get
             {
-                if (_value == null) TryGetReference();
+                // This will need a rethink as well. it's quite slow
+                //if (_value == null) TryGetReference();
                 return _value;
             }
             set
@@ -64,6 +65,7 @@ namespace VoidState.InspectorHistory.Editor
 
         public void TryGetReference()
         {
+            Debug.Log($"Attempting to get reference for {Name}");
             if (!_value && GlobalObjectId.TryParse(GlobalId, out var id))
             {
                 _value = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(id);   

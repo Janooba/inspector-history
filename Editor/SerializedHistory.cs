@@ -44,7 +44,7 @@ namespace VoidState.InspectorHistory.Editor
 
         public bool showDebug = false;
         
-        [HideInInspector]
+        [HideInInspector, SerializeField]
         public List<HistoryEntry> history = new List<HistoryEntry>();
 
         [CustomEditor(typeof(SerializedHistory))]
