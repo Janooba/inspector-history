@@ -55,6 +55,7 @@ namespace VoidState.InspectorHistory.Editor
             LoadHistoryFromAsset();
             Selection.selectionChanged += OnSelectionChanged;
             EditorSceneManager.sceneOpened += OnSceneOpened;
+            EditorSceneManager.sceneManagerSetupRestored += OnSceneManagerRestored;
             if (SerializedHistory.Instance.showDebug && HistoryEntries.Count == 0) Debug.LogWarning("No history found after loading!");
         }
 
@@ -64,6 +65,12 @@ namespace VoidState.InspectorHistory.Editor
             AssetDatabase.SaveAssetIfDirty(SerializedHistory.Instance);
             Selection.selectionChanged -= OnSelectionChanged;
             EditorSceneManager.sceneOpened -= OnSceneOpened;
+            EditorSceneManager.sceneManagerSetupRestored -= OnSceneManagerRestored;
+        }
+
+        private void OnSceneManagerRestored(Scene[] scenes)
+        {
+            UpdateVisibleHistory();
         }
         
         private void OnSceneOpened(Scene scene, OpenSceneMode mode)

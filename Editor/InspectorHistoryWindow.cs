@@ -1,5 +1,6 @@
 using System;
 using UnityEditor;
+using UnityEditor.ShortcutManagement;
 using UnityEngine;
 
 namespace VoidState.InspectorHistory.Editor
@@ -12,6 +13,18 @@ namespace VoidState.InspectorHistory.Editor
         {
             var wnd = GetWindow<InspectorHistoryWindow>();
             wnd.titleContent = new GUIContent("Inspector History");
+        }
+
+        [Shortcut("history_back", KeyCode.Mouse3, ShortcutModifiers.None, displayName = "Selection History - Back")]
+        public static void GoBack()
+        {
+            HistoryService.Instance.GoBack();
+        }
+        
+        [Shortcut("history_forward", KeyCode.Mouse4, ShortcutModifiers.None, displayName = "Selection History - Forward")]
+        public static void GoForward()
+        {
+            HistoryService.Instance.GoForward();
         }
 
         private HistoryService _history;
