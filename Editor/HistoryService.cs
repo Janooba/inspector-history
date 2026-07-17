@@ -171,7 +171,8 @@ namespace VoidState.InspectorHistory.Editor
         public void SelectHistoryItem(HistoryEntry historyItem)
         {
             int index = _visibleHistory.IndexOf(historyItem);
-            if (index == _currentHistoryIndex) return;
+            if (index == _currentHistoryIndex && Selection.activeObject != null)
+                return;
 
             if (index < InspectorHistoryWindow.HISTORY_MAX)
             {
