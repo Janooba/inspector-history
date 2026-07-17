@@ -46,7 +46,7 @@ namespace VoidState.InspectorHistory.Editor
         public int MaxHistoryStored => maxHistoryDisplayed * 2;
         
         public bool showSceneObjectsSeparately = true;
-        
+        public bool showUnloaded = false;
         public bool showDebug = false;
         
         [HideInInspector, SerializeField]

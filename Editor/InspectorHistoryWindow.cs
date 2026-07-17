@@ -64,9 +64,9 @@ namespace VoidState.InspectorHistory.Editor
             {
                 _scrollPosition = scrollView.scrollPosition;
                 
-                _favoriteView.Draw(_history.FavouriteEntries, true, false, SerializedHistory.Instance.showSceneObjectsSeparately);
+                _favoriteView.Draw(_history.FavouriteEntries, true, SerializedHistory.Instance.showUnloaded, SerializedHistory.Instance.showSceneObjectsSeparately);
 
-                _entryView.Draw(_history.DisplayedHistoryEntries, true, false, false);
+                _entryView.Draw(_history.DisplayedHistoryEntries, true, SerializedHistory.Instance.showUnloaded, false);
             }
         }
     }
