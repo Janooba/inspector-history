@@ -34,6 +34,20 @@ namespace VoidState.InspectorHistory.Editor
 
             return titleRect;
         }
+        
+        public static Rect DrawSubHeader(string title)
+        {
+            DrawSeparator(2);
+            var titleRect = EditorGUILayout.GetControlRect(false, 16, GUIStyle.none);
+            //EditorGUI.DrawRect(titleRect, Color.black.ChangeAlpha(0.2f));
+
+            int padding = 5;
+            var rectPadding = new RectOffset(padding * 3, padding, padding, padding);
+            var labelRect = rectPadding.Remove(titleRect);
+            EditorGUI.LabelField(labelRect, title, EditorStyles.boldLabel);
+
+            return titleRect;
+        }
 
         public static Rect DrawTitleFoldout(string title, ref bool isExpanded)
         {

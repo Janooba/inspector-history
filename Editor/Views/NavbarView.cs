@@ -16,10 +16,12 @@ namespace VoidState.InspectorHistory.Editor
             _service = service;
             _iconBack = EditorGUIUtility.IconContent("back");
             _iconForward = EditorGUIUtility.IconContent("forward");
+            _iconConfig =  EditorGUIUtility.IconContent("_Popup@2x");
         }
         
         private GUIContent _iconBack;
         private GUIContent _iconForward;
+        private GUIContent _iconConfig;
         
         public void Draw()
         {
@@ -29,6 +31,11 @@ namespace VoidState.InspectorHistory.Editor
             };
 
             GUIStyle forwardButtonStyle = new GUIStyle(EditorStyles.miniButtonRight)
+            {
+                fixedHeight = NAV_BTN_HEIGHT
+            };
+            
+            GUIStyle configButtonStyle = new GUIStyle(EditorStyles.miniButton)
             {
                 fixedHeight = NAV_BTN_HEIGHT
             };
@@ -56,6 +63,15 @@ namespace VoidState.InspectorHistory.Editor
                     {
                         _service.GoForward();
                     }
+                }
+                
+                GUILayout.FlexibleSpace();
+
+                if (GUILayout.Button(_iconConfig, configButtonStyle,
+                    GUILayout.Height(NAV_BTN_HEIGHT),
+                    GUILayout.Width(NAV_BTN_WIDTH)))
+                {
+                    Selection.SetActiveObjectWithContext(SerializedHistory.Instance, null);
                 }
             }
 

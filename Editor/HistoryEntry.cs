@@ -33,6 +33,7 @@ namespace VoidState.InspectorHistory.Editor
         public bool IsFavourite;
         public bool IsPersistentAsset;
         public string SceneName = "";
+        public string NiceSceneName => System.IO.Path.GetFileNameWithoutExtension(SceneName);
 
         public bool IsUnresolved => Value == null;
 
@@ -65,7 +66,7 @@ namespace VoidState.InspectorHistory.Editor
 
         public void TryGetReference()
         {
-            Debug.Log($"Attempting to get reference for {Name}");
+            if (SerializedHistory.Instance.showDebug) Debug.Log($"Attempting to get reference for {Name}");
             if (!_value && GlobalObjectId.TryParse(GlobalId, out var id))
             {
                 _value = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(id);   

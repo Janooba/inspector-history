@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.SceneManagement;
+using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
@@ -45,10 +47,6 @@ namespace VoidState.InspectorHistory.Editor
         private List<HistoryEntry> _rawFavourites = new List<HistoryEntry>();
         public List<HistoryEntry> FavouriteEntries => _rawFavourites;
         
-        // Frequents
-        private List<HistoryEntry> _rawFrequent = new List<HistoryEntry>();
-        public List<HistoryEntry> FrequentEntries => _rawFrequent;
-        
         public bool CanGoBack => _visibleHistory.Count > 1 && _currentHistoryIndex < _visibleHistory.Count - 1 && _currentHistoryIndex >= 0;
         public bool CanGoForward => _currentHistoryIndex > 0;
         
@@ -56,14 +54,21 @@ namespace VoidState.InspectorHistory.Editor
         {
             LoadHistoryFromAsset();
             Selection.selectionChanged += OnSelectionChanged;
-            if (HistoryEntries.Count == 0) Debug.LogError("No history found after loading!");
+            EditorSceneManager.sceneOpened += OnSceneOpened;
+            if (SerializedHistory.Instance.showDebug && HistoryEntries.Count == 0) Debug.LogWarning("No history found after loading!");
         }
-        
+
         public void Dispose()
         {
             SaveHistoryToAsset();
             AssetDatabase.SaveAssetIfDirty(SerializedHistory.Instance);
             Selection.selectionChanged -= OnSelectionChanged;
+            EditorSceneManager.sceneOpened -= OnSceneOpened;
+        }
+        
+        private void OnSceneOpened(Scene scene, OpenSceneMode mode)
+        {
+            UpdateVisibleHistory();
         }
         
         private void OnSelectionChanged()
@@ -90,14 +95,14 @@ namespace VoidState.InspectorHistory.Editor
 
                 var historyEntry = HistoryEntries.FirstOrDefault(x => x.Equals(activeObject)) ?? new HistoryEntry(activeObject);
 
+                historyEntry.Value = activeObject;
                 historyEntry.Uses++;
                 historyEntry.UpdateMetadata();
 
                 int removed = HistoryEntries.RemoveAll(x => x.Equals(activeObject));
-                if (removed > 1) Debug.LogError($"Removed {removed} entries from history for {activeObject.name}!");
+                if (SerializedHistory.Instance.showDebug && removed > 1) Debug.LogWarning($"Removed {removed} entries from history for {activeObject.name}!");
                 HistoryEntries.Insert(0, historyEntry);
 
-                UpdateFrequent();
                 UpdateVisibleHistory();
 
                 _currentHistoryIndex = 0;
@@ -107,32 +112,15 @@ namespace VoidState.InspectorHistory.Editor
                 _currentHistoryIndex = -1;
             }
             
-            if (HistoryEntries.Count == 0) Debug.LogError("Something wiped the history in OnSelectionChanged!");
+            if (SerializedHistory.Instance.showDebug && HistoryEntries.Count == 0) Debug.LogWarning("Something wiped the history in OnSelectionChanged!");
             
             EditorUtility.SetDirty(SerializedHistory.Instance);
-        }
-        
-        private void UpdateFrequent()
-        {
-            _rawFrequent.Clear();
-            return;
-            
-            // Need to rethink this
-            for (int i = 0; i < InspectorHistoryWindow.FREQUENT_MAX; i++)
-            {
-                if (i >= HistoryEntries.Count) break;
-                
-                var entry = HistoryEntries[i];
-                if (!entry.IsFavourite) continue;
-
-                _rawFrequent.Add(entry);
-            }
         }
 
         private void UpdateVisibleHistory()
         {
             _visibleHistory.Clear();
-            for (int i = 0; i < InspectorHistoryWindow.HISTORY_MAX * 2; i++)
+            for (int i = 0; i < SerializedHistory.Instance.MaxHistoryStored; i++)
             {
                 if (i >= HistoryEntries.Count) break;
                 
@@ -140,7 +128,11 @@ namespace VoidState.InspectorHistory.Editor
                 
                 if (entry.IsUnresolved)
                 {
-                    continue;
+                    if (SceneManager.GetSceneByPath(entry.SceneName).isLoaded)
+                        entry.TryGetReference();
+                    
+                    if (entry.IsUnresolved)
+                        continue;
                 }
 
                 _visibleHistory.Add(entry);
@@ -174,14 +166,13 @@ namespace VoidState.InspectorHistory.Editor
             if (index == _currentHistoryIndex && Selection.activeObject != null)
                 return;
 
-            if (index < InspectorHistoryWindow.HISTORY_MAX)
+            if (index < SerializedHistory.Instance.maxHistoryDisplayed)
             {
                 _currentHistoryIndex = index;
                 _navigateFlag = true;
             }
             
             historyItem.Uses++;
-            UpdateFrequent();
             UpdateVisibleHistory();
             Selection.SetActiveObjectWithContext(historyItem.Value, null);
         }
@@ -199,7 +190,6 @@ namespace VoidState.InspectorHistory.Editor
                 _rawFavourites.Add(historyItem);
             }
 
-            UpdateFrequent();
             UpdateVisibleHistory();
         }
         #endregion
@@ -213,7 +203,7 @@ namespace VoidState.InspectorHistory.Editor
 
         public void LoadHistoryFromAsset()
         {
-            if (HistoryEntries.Count == 0) Debug.LogError("History is blank before loading!");
+            if (SerializedHistory.Instance.showDebug && HistoryEntries.Count == 0) Debug.LogWarning("History is blank before loading!");
             // Resolve ObjectIds into their respective object
             // This is done a bit weirdly like this for performance.
             // It's a slow process so we want to resolve them in bulk.
@@ -233,7 +223,6 @@ namespace VoidState.InspectorHistory.Editor
             _rawFavourites = HistoryEntries.Where(x => x.IsFavourite).ToList();
                     
             // Initialize other lists
-            UpdateFrequent();
             UpdateVisibleHistory();
         }
         
@@ -241,7 +230,6 @@ namespace VoidState.InspectorHistory.Editor
         {
             HistoryEntries.Clear();
             _rawFavourites.Clear();
-            _rawFrequent.Clear();
             _visibleHistory.Clear();
             _currentHistoryIndex = 0;
         }
