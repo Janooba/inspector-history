@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -135,11 +134,13 @@ namespace VoidState.InspectorHistory.Editor
                 
                 if (entry.IsUnresolved)
                 {
-                    if (SceneManager.GetSceneByPath(entry.SceneName).isLoaded)
-                        entry.TryGetReference();
-                    
-                    if (entry.IsUnresolved)
+                    if (!entry.TryResolveReference())
+                    {
+                        // Global Id Resolve is invalid, will just remove it
+                        HistoryEntries.Remove(entry);
+                        i--;
                         continue;
+                    }
                 }
 
                 _visibleHistory.Add(entry);

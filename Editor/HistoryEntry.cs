@@ -2,6 +2,7 @@ using System;
 using UnityEditor;
 using UnityEditor.Search;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
 
 namespace VoidState.InspectorHistory.Editor
@@ -61,18 +62,33 @@ namespace VoidState.InspectorHistory.Editor
 
             Name = Value.name;
             Type = Value.GetType().Name;
-            GlobalId = GetObjectGlobalId(Value);
+            if (string.IsNullOrEmpty(GlobalId)) GlobalId = GetObjectGlobalId(Value);
         }
 
-        public void TryGetReference()
+        public bool TryResolveReference()
         {
-            if (SerializedHistory.Instance.showDebug) Debug.Log($"Attempting to get reference for {Name}");
-            if (!_value && GlobalObjectId.TryParse(GlobalId, out var id))
+            if (!_value && (IsPersistentAsset || SceneManager.GetSceneByPath(SceneName).isLoaded))
             {
-                _value = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(id);   
-            }
+                if (SerializedHistory.Instance.showDebug) Debug.Log($"Attempting to get reference for {Name}");
 
-            if (_value) UpdateMetadata();
+                bool isIdFormatValid = GlobalObjectId.TryParse(GlobalId, out var id);
+                
+                if (isIdFormatValid)
+                {
+                    _value = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(id);
+                }
+                
+                if (!isIdFormatValid || !_value)
+                {
+                    // We should have been able to resolve the object but couldn't
+                    // This GlobalID is likely no longer valid
+                    GlobalId = null;
+                    return false;
+                }
+            }
+            
+            UpdateMetadata();
+            return true;
         }
         
         public bool Equals(HistoryEntry other)
