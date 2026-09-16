@@ -52,6 +52,20 @@ namespace VoidState.InspectorHistory.Editor
         [HideInInspector, SerializeField]
         public List<HistoryEntry> history = new List<HistoryEntry>();
 
+        /// <summary> Trims the history to it's max stored length. </summary>
+        /// <returns> How many entries were removed. </returns>
+        public int Trim()
+        {
+            if (history.Count > MaxHistoryStored)
+            {
+                int toRemove = history.Count - MaxHistoryStored;
+                history.RemoveRange(MaxHistoryStored, toRemove);
+                return toRemove;
+            }
+
+            return 0;
+        }
+
         [CustomEditor(typeof(SerializedHistory))]
         public class SerializedHistoryEditor : UnityEditor.Editor
         {

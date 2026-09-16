@@ -109,6 +109,8 @@ namespace VoidState.InspectorHistory.Editor
                 if (SerializedHistory.Instance.showDebug && removed > 1) Debug.LogWarning($"Removed {removed} entries from history for {activeObject.name}!");
                 HistoryEntries.Insert(0, historyEntry);
 
+                SerializedHistory.Instance.Trim();
+
                 UpdateVisibleHistory();
 
                 _currentHistoryIndex = 0;
