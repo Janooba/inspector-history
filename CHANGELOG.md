@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.2] - 2026-09-16
+
+### Summary:
+Fixes bloating history by trimming excess.
+
+### Changed:
+- SerializedHistory now has a Trim method, called by HistoryService, to remove excess entries.
+
 ## [1.1.1] - 2026-07-19
 
 ### Summary:
