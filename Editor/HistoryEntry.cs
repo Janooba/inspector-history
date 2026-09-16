@@ -100,7 +100,7 @@ namespace VoidState.InspectorHistory.Editor
         public bool Equals(Object other)
         {
             if (other == null) return false;
-            if (other.GetHashCode() != Value.GetHashCode()) return false;
+            if (Value && other.GetHashCode() != Value.GetHashCode()) return false;
             return Equals(GlobalId, GetObjectGlobalId(other));
         }
 
