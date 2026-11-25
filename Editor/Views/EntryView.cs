@@ -53,7 +53,7 @@ namespace VoidState.InspectorHistory.Editor
             }
         }
 
-        public static void Draw(this HistoryEntry entry, bool isSelected, Action<HistoryEntry> selectedCallback, Action<HistoryEntry> favouriteCallback)
+        public static void Draw(this HistoryEntry entry, bool isSelected, bool isFavourite, Action<HistoryEntry> selectedCallback, Action<HistoryEntry> favouriteCallback)
         {
             EnsureStylesInitialized();
             
@@ -75,8 +75,8 @@ namespace VoidState.InspectorHistory.Editor
 
             // Star / Fav
             if (GUILayout.Button(
-                    entry.IsFavourite ? _iconStarSelected : _iconStar,
-                    entry.IsFavourite ? _rowButton : _rowButtonHighlight))
+                    isFavourite ? _iconStarSelected : _iconStar,
+                    isFavourite ? _rowButton : _rowButtonHighlight))
             {
                 favouriteCallback?.Invoke(entry);
             }
@@ -84,13 +84,14 @@ namespace VoidState.InspectorHistory.Editor
             Utilities.DrawVerticalSeparator();
 
             // Location icon
-            var locContent = entry.IsPersistentAsset
+            // IconContent returns a GUIContent that Unity shares, so the tooltip goes on a copy.
+            var locIcon = entry.IsPersistentAsset
                 ? EditorGUIUtility.IconContent("Folder Icon")
                 : EditorGUIUtility.IconContent("SceneAsset Icon");
-            
-            locContent.tooltip = entry.IsPersistentAsset
+
+            var locContent = new GUIContent(locIcon.image, entry.IsPersistentAsset
                 ? Path.GetDirectoryName(entry.Path)
-                : Path.GetFileNameWithoutExtension(entry.SceneName);
+                : Path.GetFileNameWithoutExtension(entry.SceneName));
             
             var locIconRect = EditorGUILayout.GetControlRect(false, GUILayout.Width(19), GUILayout.Height(19));
             if (GUI.Button(locIconRect, locContent, GUIStyle.none))
@@ -109,7 +110,7 @@ namespace VoidState.InspectorHistory.Editor
 
             Utilities.DrawVerticalSeparator();
             
-            GUILayout.Label(new GUIContent(entry.Name, $"{entry.Type}"));
+            GUILayout.Label(new GUIContent(entry.Name, GetTooltip(entry)));
 
             if (SerializedHistory.Instance.showDebug)
             {
@@ -128,6 +129,16 @@ namespace VoidState.InspectorHistory.Editor
             {
                 selectedCallback?.Invoke(entry);
             }
+        }
+
+        private static string GetTooltip(HistoryEntry entry)
+        {
+            if (entry.Value != null) return entry.Type;
+            if (entry.IsAssetMissing) return $"{entry.Type}\nThe asset or scene no longer exists.";
+
+            return entry.IsPersistentAsset
+                ? $"{entry.Type}\nThe object could not be loaded."
+                : $"{entry.Type}\nThe scene is not loaded.";
         }
     }
 }

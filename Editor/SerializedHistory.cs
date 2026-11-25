@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using UnityEditor;
 using UnityEngine;
 
@@ -7,6 +8,8 @@ namespace VoidState.InspectorHistory.Editor
 {
     public class SerializedHistory : ScriptableObject
     {
+        private const string ASSET_PATH = "Assets/Resources/SelectionHistoryConfig.asset";
+
         private static SerializedHistory _instance;
         public static SerializedHistory Instance
         {
@@ -15,13 +18,18 @@ namespace VoidState.InspectorHistory.Editor
                 if (!_instance)
                 {
                     var guids = AssetDatabase.FindAssetGUIDs("t:SerializedHistory");
-                    if (guids.Length == 0)
+                    if (guids.Length == 0 && File.Exists(ASSET_PATH))
+                    {
+                        // The type search can fail while the asset database is not ready.
+                        _instance = AssetDatabase.LoadAssetAtPath<SerializedHistory>(ASSET_PATH);
+                    }
+                    else if (guids.Length == 0)
                     {
                         // None found, we must create it
                         _instance = CreateInstance<SerializedHistory>();
                         if (!AssetDatabase.IsValidFolder($"Assets/Resources"))
                             AssetDatabase.CreateFolder("Assets", "Resources");
-                        AssetDatabase.CreateAsset(_instance, $"Assets/Resources/SelectionHistoryConfig.asset");
+                        AssetDatabase.CreateAsset(_instance, ASSET_PATH);
                         AssetDatabase.SaveAssets();
                     }
                     else
@@ -47,10 +55,15 @@ namespace VoidState.InspectorHistory.Editor
         
         public bool showSceneObjectsSeparately = true;
         public bool showUnloaded = false;
+        [Tooltip("Ignore folders that are selected in the Project window.")]
+        public bool skipFolders = false;
         public bool showDebug = false;
         
         [HideInInspector, SerializeField]
         public List<HistoryEntry> history = new List<HistoryEntry>();
+
+        [HideInInspector, SerializeField]
+        public List<HistoryEntry> favourites = new List<HistoryEntry>();
 
         /// <summary> Trims the history to it's max stored length. </summary>
         /// <returns> How many entries were removed. </returns>
@@ -71,10 +84,12 @@ namespace VoidState.InspectorHistory.Editor
         {
             private SerializedHistory _serializedHistory;
             private SerializedProperty _serializedHistoryListProperty;
+            private SerializedProperty _serializedFavouritesListProperty;
 
             private void OnEnable()
             {
                 _serializedHistoryListProperty = serializedObject.FindProperty(nameof(history));
+                _serializedFavouritesListProperty = serializedObject.FindProperty(nameof(favourites));
             }
 
             public override void OnInspectorGUI()
@@ -96,6 +111,7 @@ namespace VoidState.InspectorHistory.Editor
                 using (new EditorGUI.DisabledGroupScope(true))
                 {
                     EditorGUILayout.PropertyField(_serializedHistoryListProperty, true);
+                    EditorGUILayout.PropertyField(_serializedFavouritesListProperty, true);
                 }
                 
                 EditorGUILayout.BeginHorizontal();
