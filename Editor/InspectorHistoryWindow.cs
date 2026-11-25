@@ -50,8 +50,8 @@ namespace VoidState.InspectorHistory.Editor
         {
             _navbarView ??= new NavbarView(_history);
             _favoriteView ??= new EntryListView(_history, "Favourites");
-            if (_entryView == null || _entryView.MaxVisible != SerializedHistory.Instance.maxHistoryDisplayed) 
-                _entryView = new EntryListView(_history, "History", SerializedHistory.Instance.maxHistoryDisplayed);
+            if (_entryView == null || _entryView.MaxVisible != HistoryData.instance.maxHistoryDisplayed) 
+                _entryView = new EntryListView(_history, "History", HistoryData.instance.maxHistoryDisplayed);
         }
 
         private void OnGUI()
@@ -64,9 +64,9 @@ namespace VoidState.InspectorHistory.Editor
             {
                 _scrollPosition = scrollView.scrollPosition;
                 
-                _favoriteView.Draw(_history.FavouriteEntries, true, SerializedHistory.Instance.showUnloaded, SerializedHistory.Instance.showSceneObjectsSeparately);
+                _favoriteView.Draw(_history.FavouriteEntries, true, HistoryData.instance.showUnloaded, HistoryData.instance.showSceneObjectsSeparately);
 
-                _entryView.Draw(_history.DisplayedHistoryEntries, true, SerializedHistory.Instance.showUnloaded, false);
+                _entryView.Draw(_history.DisplayedHistoryEntries, true, HistoryData.instance.showUnloaded, false);
             }
         }
     }

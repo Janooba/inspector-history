@@ -76,7 +76,7 @@ namespace VoidState.InspectorHistory.Editor
                     GUILayout.Height(NAV_BTN_HEIGHT),
                     GUILayout.Width(NAV_BTN_WIDTH)))
                 {
-                    Selection.SetActiveObjectWithContext(SerializedHistory.Instance, null);
+                    SettingsService.OpenUserPreferences(HistoryData.SETTINGS_PATH);
                 }
             }
 

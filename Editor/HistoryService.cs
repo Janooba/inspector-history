@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -12,6 +13,12 @@ namespace VoidState.InspectorHistory.Editor
     [InitializeOnLoad]
     public class HistoryService : IDisposable
     {
+        /// Versions 1.1.2 and earlier stored the history in this asset.
+        private const string LEGACY_ASSET_PATH = "Assets/Resources/SelectionHistoryConfig.asset";
+
+        /// The GUID of the removed SerializedHistory script, which the legacy asset references.
+        private const string LEGACY_SCRIPT_GUID = "87d94af2e00e4462ea439c46e5ddeb23";
+
         private static HistoryService _instance;
         public static HistoryService Instance
         {
@@ -37,13 +44,13 @@ namespace VoidState.InspectorHistory.Editor
         public HistoryEntry SelectedEntry => _currentHistoryIndex > -1 && _visibleHistory.Count > 0 ? _visibleHistory[_currentHistoryIndex] : null;
 
         // History
-        public List<HistoryEntry> HistoryEntries => SerializedHistory.Instance.history;
+        public List<HistoryEntry> HistoryEntries => HistoryData.instance.history;
 
         private List<HistoryEntry> _visibleHistory = new List<HistoryEntry>();
         public List<HistoryEntry> DisplayedHistoryEntries => _visibleHistory;
 
         // Favourites
-        public List<HistoryEntry> FavouriteEntries => SerializedHistory.Instance.favourites;
+        public List<HistoryEntry> FavouriteEntries => HistoryData.instance.favourites;
 
         public bool CanGoBack => FindLoadedIndex(_currentHistoryIndex + 1, 1) >= 0;
         public bool CanGoForward => _currentHistoryIndex > 0 && FindLoadedIndex(_currentHistoryIndex - 1, -1) >= 0;
@@ -56,24 +63,38 @@ namespace VoidState.InspectorHistory.Editor
 
         public void Dispose()
         {
-            SaveHistoryToAsset();
+            SaveHistory();
             EditorApplication.delayCall -= Initialize;
             Selection.selectionChanged -= OnSelectionChanged;
             EditorSceneManager.sceneOpened -= OnSceneOpened;
             EditorSceneManager.sceneManagerSetupRestored -= OnSceneManagerRestored;
-            AssemblyReloadEvents.beforeAssemblyReload -= SaveHistoryToAsset;
-            EditorApplication.quitting -= SaveHistoryToAsset;
+            AssemblyReloadEvents.beforeAssemblyReload -= SaveHistory;
+            EditorApplication.quitting -= SaveHistory;
         }
 
         private void Initialize()
         {
-            LoadHistoryFromAsset();
+            DeleteLegacyAsset();
+            LoadHistory();
             Selection.selectionChanged += OnSelectionChanged;
             EditorSceneManager.sceneOpened += OnSceneOpened;
             EditorSceneManager.sceneManagerSetupRestored += OnSceneManagerRestored;
-            AssemblyReloadEvents.beforeAssemblyReload += SaveHistoryToAsset;
-            EditorApplication.quitting += SaveHistoryToAsset;
-            if (SerializedHistory.Instance.showDebug && HistoryEntries.Count == 0) Debug.LogWarning("No history found after loading!");
+            AssemblyReloadEvents.beforeAssemblyReload += SaveHistory;
+            EditorApplication.quitting += SaveHistory;
+            if (HistoryData.instance.showDebug && HistoryEntries.Count == 0) Debug.LogWarning("No history found after loading!");
+        }
+
+        private static void DeleteLegacyAsset()
+        {
+            if (!File.Exists(LEGACY_ASSET_PATH)) return;
+
+            // The script GUID identifies the asset, because a different asset can have the same path.
+            if (!File.ReadAllText(LEGACY_ASSET_PATH).Contains($"guid: {LEGACY_SCRIPT_GUID}")) return;
+
+            if (AssetDatabase.DeleteAsset(LEGACY_ASSET_PATH))
+            {
+                Debug.Log($"Inspector History: Deleted the legacy history asset at {LEGACY_ASSET_PATH}. History is now saved in UserSettings.");
+            }
         }
 
         private void OnSceneManagerRestored(Scene[] scenes)
@@ -126,10 +147,10 @@ namespace VoidState.InspectorHistory.Editor
                 historyEntry.UpdateMetadata();
 
                 int removed = HistoryEntries.RemoveAll(x => IsSameObject(x, activeObject, activeId));
-                if (SerializedHistory.Instance.showDebug && removed > 1) Debug.LogWarning($"Removed {removed} entries from history for {activeObject.name}!");
+                if (HistoryData.instance.showDebug && removed > 1) Debug.LogWarning($"Removed {removed} entries from history for {activeObject.name}!");
                 HistoryEntries.Insert(0, historyEntry);
 
-                SerializedHistory.Instance.Trim();
+                HistoryData.instance.Trim();
 
                 UpdateVisibleHistory();
 
@@ -140,9 +161,9 @@ namespace VoidState.InspectorHistory.Editor
                 _currentHistoryIndex = -1;
             }
 
-            if (SerializedHistory.Instance.showDebug && HistoryEntries.Count == 0) Debug.LogWarning("Something wiped the history in OnSelectionChanged!");
+            if (HistoryData.instance.showDebug && HistoryEntries.Count == 0) Debug.LogWarning("Something wiped the history in OnSelectionChanged!");
 
-            EditorUtility.SetDirty(SerializedHistory.Instance);
+            SaveHistory();
         }
 
         /// Compares ids only for unloaded entries, because GetObjectGlobalId is slow.
@@ -153,13 +174,13 @@ namespace VoidState.InspectorHistory.Editor
 
         private static bool IsSkippedFolder(Object obj)
         {
-            return SerializedHistory.Instance.skipFolders && AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(obj));
+            return HistoryData.instance.skipFolders && AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(obj));
         }
 
         private void UpdateVisibleHistory()
         {
             _visibleHistory.Clear();
-            for (int i = 0; i < SerializedHistory.Instance.MaxHistoryStored; i++)
+            for (int i = 0; i < HistoryData.instance.MaxHistoryStored; i++)
             {
                 if (i >= HistoryEntries.Count) break;
 
@@ -195,7 +216,7 @@ namespace VoidState.InspectorHistory.Editor
 
             historyItem.Uses++;
             int index = _visibleHistory.IndexOf(historyItem);
-            if (index >= 0 && index < SerializedHistory.Instance.maxHistoryDisplayed)
+            if (index >= 0 && index < HistoryData.instance.maxHistoryDisplayed)
             {
                 NavigateTo(index);
             }
@@ -239,20 +260,19 @@ namespace VoidState.InspectorHistory.Editor
                 FavouriteEntries.Add(historyItem);
             }
 
-            SaveHistoryToAsset();
+            SaveHistory();
         }
         #endregion
 
         #region Save / Load
-        public void SaveHistoryToAsset()
+        public void SaveHistory()
         {
-            EditorUtility.SetDirty(SerializedHistory.Instance);
-            AssetDatabase.SaveAssetIfDirty(SerializedHistory.Instance);
+            HistoryData.instance.SaveToFile();
         }
 
-        public void LoadHistoryFromAsset()
+        public void LoadHistory()
         {
-            if (SerializedHistory.Instance.showDebug && HistoryEntries.Count == 0)
+            if (HistoryData.instance.showDebug && HistoryEntries.Count == 0)
                 Debug.LogWarning("History is blank before loading!");
 
             ResolveInBulk(HistoryEntries);

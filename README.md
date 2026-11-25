@@ -13,7 +13,7 @@ The Inspector History package logs all inspector selections and provides easy na
 ### 1. History Tracking
 - Automatically logs all inspector selections in Unity Editor
 - Maintains a chronological history of your selection actions
-- Preserves object references across editor sessions using a ScriptableObject in Resources
+- Preserves object references across editor sessions in a per-user file in the project's `UserSettings` folder
 
 <img width="263" height="185" alt="navigation" src="https://github.com/user-attachments/assets/28924597-a243-4779-b576-925ecfca5b1c" />
 
@@ -56,17 +56,18 @@ The Inspector History package logs all inspector selections and provides easy na
 - Mouse 3 and Mouse 4 are used as forward and back shortcuts by default. They can be modified within the Unity shortcut window.
 
 ### Configuration Options
+Open the settings with the gear button in the navigation bar, or in `Edit/Preferences/Inspector History`.
 - Max History Displayed: Limits the history displayed. Storage is 2x this value.
 - Show Scene Objects Separately: For favorites, this will split out scene objects into their own headers per-open-scene
 - Show Unloaded: Will show inaccessible entries in red instead of hiding them (unloaded scenes, etc)
-    - Note: In the history, unloaded entries are automatically truncated after a new selection. Favorites persist though
+    - Note: An entry is removed from the history when its asset or scene is deleted. Favorites persist even when the reference cannot be loaded and must be cleaned  up manually.
+- Skip Folders: Do not record folders that are selected in the Project window into the history
 - Show Debug: Shows some debug information on the window and in the console as you navigate
 
 ## Technical Details
 
 ### Data Persistence
-- History and settings are saved to a ScriptableObject in Resources between editor sessions
-- You may want to include this ScriptableObject file in your .gitignore for teams
+- History and settings are saved to `UserSettings/InspectorHistory.asset` in the project folder
 - Maintains object references using Unity's new `GlobalObjectId` system
 
 ## Requirements

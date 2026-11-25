@@ -112,7 +112,7 @@ namespace VoidState.InspectorHistory.Editor
             
             GUILayout.Label(new GUIContent(entry.Name, GetTooltip(entry)));
 
-            if (SerializedHistory.Instance.showDebug)
+            if (HistoryData.instance.showDebug)
             {
                 var textRect = GUILayoutUtility.GetLastRect();
                 GUI.Label(textRect, entry.Uses.ToString(), _rowCountStyle);

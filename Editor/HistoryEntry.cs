@@ -38,7 +38,7 @@ namespace VoidState.InspectorHistory.Editor
         public bool IsUnresolved => Value == null;
 
         public bool IsAssetMissing => !GlobalObjectId.TryParse(GlobalId, out var id)
-            || !AssetDatabase.AssetPathExists(AssetDatabase.GUIDToAssetPath(id.assetGUID));
+            || string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(AssetDatabase.GUIDToAssetPath(id.assetGUID), AssetPathToGUIDOptions.OnlyExistingAssets));
 
         public HistoryEntry(Object value)
         {
@@ -71,7 +71,7 @@ namespace VoidState.InspectorHistory.Editor
         {
             if (!_value && (IsPersistentAsset || SceneManager.GetSceneByPath(SceneName).isLoaded))
             {
-                if (SerializedHistory.Instance.showDebug) Debug.Log($"Attempting to get reference for {Name}");
+                if (HistoryData.instance.showDebug) Debug.Log($"Attempting to get reference for {Name}");
 
                 if (GlobalObjectId.TryParse(GlobalId, out var id))
                 {
