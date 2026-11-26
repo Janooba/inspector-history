@@ -22,20 +22,25 @@ namespace VoidState.InspectorHistory.Editor
         private GUIContent _iconBack;
         private GUIContent _iconForward;
         private GUIContent _iconConfig;
-        
+
+        private GUIStyle _backButtonStyle;
+        private GUIStyle _forwardButtonStyle;
+        private GUIStyle _configButtonStyle;
+
         public void Draw()
         {
-            GUIStyle backButtonStyle = new GUIStyle(EditorStyles.miniButtonLeft)
+            // EditorStyles is not ready when the constructor runs during InitializeOnLoad.
+            _backButtonStyle ??= new GUIStyle(EditorStyles.miniButtonLeft)
             {
                 fixedHeight = NAV_BTN_HEIGHT
             };
 
-            GUIStyle forwardButtonStyle = new GUIStyle(EditorStyles.miniButtonRight)
+            _forwardButtonStyle ??= new GUIStyle(EditorStyles.miniButtonRight)
             {
                 fixedHeight = NAV_BTN_HEIGHT
             };
-            
-            GUIStyle configButtonStyle = new GUIStyle(EditorStyles.miniButton)
+
+            _configButtonStyle ??= new GUIStyle(EditorStyles.miniButton)
             {
                 fixedHeight = NAV_BTN_HEIGHT
             };
@@ -49,7 +54,7 @@ namespace VoidState.InspectorHistory.Editor
             {
                 using (new EditorGUI.DisabledGroupScope(!_service.CanGoBack))
                 {
-                    if (GUILayout.Button(_iconBack, backButtonStyle, GUILayout.Height(NAV_BTN_HEIGHT),
+                    if (GUILayout.Button(_iconBack, _backButtonStyle, GUILayout.Height(NAV_BTN_HEIGHT),
                             GUILayout.Width(NAV_BTN_WIDTH)))
                     {
                         _service.GoBack();
@@ -58,7 +63,7 @@ namespace VoidState.InspectorHistory.Editor
 
                 using (new EditorGUI.DisabledGroupScope(!_service.CanGoForward))
                 {
-                    if (GUILayout.Button(_iconForward, forwardButtonStyle, GUILayout.Height(NAV_BTN_HEIGHT),
+                    if (GUILayout.Button(_iconForward, _forwardButtonStyle, GUILayout.Height(NAV_BTN_HEIGHT),
                             GUILayout.Width(NAV_BTN_WIDTH)))
                     {
                         _service.GoForward();
@@ -67,11 +72,11 @@ namespace VoidState.InspectorHistory.Editor
                 
                 GUILayout.FlexibleSpace();
 
-                if (GUILayout.Button(_iconConfig, configButtonStyle,
+                if (GUILayout.Button(_iconConfig, _configButtonStyle,
                     GUILayout.Height(NAV_BTN_HEIGHT),
                     GUILayout.Width(NAV_BTN_WIDTH)))
                 {
-                    Selection.SetActiveObjectWithContext(SerializedHistory.Instance, null);
+                    SettingsService.OpenUserPreferences(HistoryData.SETTINGS_PATH);
                 }
             }
 

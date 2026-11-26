@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -12,6 +13,12 @@ namespace VoidState.InspectorHistory.Editor
     [InitializeOnLoad]
     public class HistoryService : IDisposable
     {
+        /// Versions 1.1.2 and earlier stored the history in this asset.
+        private const string LEGACY_ASSET_PATH = "Assets/Resources/SelectionHistoryConfig.asset";
+
+        /// The GUID of the removed SerializedHistory script, which the legacy asset references.
+        private const string LEGACY_SCRIPT_GUID = "87d94af2e00e4462ea439c46e5ddeb23";
+
         private static HistoryService _instance;
         public static HistoryService Instance
         {
@@ -21,62 +28,95 @@ namespace VoidState.InspectorHistory.Editor
                 return _instance;
             }
         }
-        
+
         static HistoryService()
         {
             _instance = new HistoryService();
         }
-        
+
         /// True if navigation was triggered by this toolset and not a user selecting something.
         /// Used to refrain from updating the history while navigating.
         private bool _navigateFlag = false;
 
         /// Where we are in the current history. 0 index is most recent, 1 is last, 2 is one before last, etc.
         private int _currentHistoryIndex = 0;
-        
+
         public HistoryEntry SelectedEntry => _currentHistoryIndex > -1 && _visibleHistory.Count > 0 ? _visibleHistory[_currentHistoryIndex] : null;
-        
+
         // History
-        public List<HistoryEntry> HistoryEntries => SerializedHistory.Instance.history;
-        
+        public List<HistoryEntry> HistoryEntries => HistoryData.instance.history;
+
         private List<HistoryEntry> _visibleHistory = new List<HistoryEntry>();
         public List<HistoryEntry> DisplayedHistoryEntries => _visibleHistory;
-        
+
         // Favourites
-        private List<HistoryEntry> _rawFavourites = new List<HistoryEntry>();
-        public List<HistoryEntry> FavouriteEntries => _rawFavourites;
-        
-        public bool CanGoBack => _visibleHistory.Count > 1 && _currentHistoryIndex < _visibleHistory.Count - 1 && _currentHistoryIndex >= 0;
-        public bool CanGoForward => _currentHistoryIndex > 0;
-        
+        public List<HistoryEntry> FavouriteEntries => HistoryData.instance.favourites;
+
+        public bool CanGoBack => FindLoadedIndex(_currentHistoryIndex + 1, 1) >= 0;
+        public bool CanGoForward => _currentHistoryIndex > 0 && FindLoadedIndex(_currentHistoryIndex - 1, -1) >= 0;
+
         public HistoryService()
         {
-            LoadHistoryFromAsset();
-            Selection.selectionChanged += OnSelectionChanged;
-            EditorSceneManager.sceneOpened += OnSceneOpened;
-            EditorSceneManager.sceneManagerSetupRestored += OnSceneManagerRestored;
-            if (SerializedHistory.Instance.showDebug && HistoryEntries.Count == 0) Debug.LogWarning("No history found after loading!");
+            // Assets do not load reliably during InitializeOnLoad.
+            EditorApplication.delayCall += Initialize;
         }
 
         public void Dispose()
         {
-            SaveHistoryToAsset();
-            AssetDatabase.SaveAssetIfDirty(SerializedHistory.Instance);
+            SaveHistory();
+            EditorApplication.delayCall -= Initialize;
             Selection.selectionChanged -= OnSelectionChanged;
             EditorSceneManager.sceneOpened -= OnSceneOpened;
             EditorSceneManager.sceneManagerSetupRestored -= OnSceneManagerRestored;
+            AssemblyReloadEvents.beforeAssemblyReload -= SaveHistory;
+            EditorApplication.quitting -= SaveHistory;
+        }
+
+        private void Initialize()
+        {
+            DeleteLegacyAsset();
+            LoadHistory();
+            Selection.selectionChanged += OnSelectionChanged;
+            EditorSceneManager.sceneOpened += OnSceneOpened;
+            EditorSceneManager.sceneManagerSetupRestored += OnSceneManagerRestored;
+            AssemblyReloadEvents.beforeAssemblyReload += SaveHistory;
+            EditorApplication.quitting += SaveHistory;
+            if (HistoryData.instance.showDebug && HistoryEntries.Count == 0) Debug.LogWarning("No history found after loading!");
+        }
+
+        private static void DeleteLegacyAsset()
+        {
+            if (!File.Exists(LEGACY_ASSET_PATH)) return;
+
+            // The script GUID identifies the asset, because a different asset can have the same path.
+            if (!File.ReadAllText(LEGACY_ASSET_PATH).Contains($"guid: {LEGACY_SCRIPT_GUID}")) return;
+
+            if (AssetDatabase.DeleteAsset(LEGACY_ASSET_PATH))
+            {
+                Debug.Log($"Inspector History: Deleted the legacy history asset at {LEGACY_ASSET_PATH}. History is now saved in UserSettings.");
+            }
         }
 
         private void OnSceneManagerRestored(Scene[] scenes)
         {
+            ResolveFavourites();
             UpdateVisibleHistory();
         }
-        
+
         private void OnSceneOpened(Scene scene, OpenSceneMode mode)
         {
+            ResolveFavourites();
             UpdateVisibleHistory();
         }
-        
+
+        private void ResolveFavourites()
+        {
+            foreach (var entry in FavouriteEntries)
+            {
+                if (entry.IsUnresolved) entry.TryResolveReference();
+            }
+        }
+
         private void OnSelectionChanged()
         {
             if (_navigateFlag)
@@ -88,7 +128,7 @@ namespace VoidState.InspectorHistory.Editor
 
             var activeObject = Selection.activeObject;
 
-            if (activeObject != null)
+            if (activeObject != null && !IsSkippedFolder(activeObject))
             {
                 if (_currentHistoryIndex > 0)
                 {
@@ -99,17 +139,18 @@ namespace VoidState.InspectorHistory.Editor
                     HistoryEntries.AddRange(temp);
                 }
 
-                var historyEntry = HistoryEntries.FirstOrDefault(x => x.Equals(activeObject)) ?? new HistoryEntry(activeObject);
+                string activeId = HistoryEntry.GetObjectGlobalId(activeObject);
+                var historyEntry = HistoryEntries.FirstOrDefault(x => IsSameObject(x, activeObject, activeId)) ?? new HistoryEntry(activeObject);
 
                 historyEntry.Value = activeObject;
                 historyEntry.Uses++;
                 historyEntry.UpdateMetadata();
 
-                int removed = HistoryEntries.RemoveAll(x => x.Equals(activeObject));
-                if (SerializedHistory.Instance.showDebug && removed > 1) Debug.LogWarning($"Removed {removed} entries from history for {activeObject.name}!");
+                int removed = HistoryEntries.RemoveAll(x => IsSameObject(x, activeObject, activeId));
+                if (HistoryData.instance.showDebug && removed > 1) Debug.LogWarning($"Removed {removed} entries from history for {activeObject.name}!");
                 HistoryEntries.Insert(0, historyEntry);
 
-                SerializedHistory.Instance.Trim();
+                HistoryData.instance.Trim();
 
                 UpdateVisibleHistory();
 
@@ -119,127 +160,149 @@ namespace VoidState.InspectorHistory.Editor
             {
                 _currentHistoryIndex = -1;
             }
-            
-            if (SerializedHistory.Instance.showDebug && HistoryEntries.Count == 0) Debug.LogWarning("Something wiped the history in OnSelectionChanged!");
-            
-            EditorUtility.SetDirty(SerializedHistory.Instance);
+
+            if (HistoryData.instance.showDebug && HistoryEntries.Count == 0) Debug.LogWarning("Something wiped the history in OnSelectionChanged!");
+
+            SaveHistory();
+        }
+
+        /// Compares ids only for unloaded entries, because GetObjectGlobalId is slow.
+        private static bool IsSameObject(HistoryEntry entry, Object obj, string objId)
+        {
+            return entry.Value ? entry.Value == obj : entry.GlobalId == objId;
+        }
+
+        private static bool IsSkippedFolder(Object obj)
+        {
+            return HistoryData.instance.skipFolders && AssetDatabase.IsValidFolder(AssetDatabase.GetAssetPath(obj));
         }
 
         private void UpdateVisibleHistory()
         {
             _visibleHistory.Clear();
-            for (int i = 0; i < SerializedHistory.Instance.MaxHistoryStored; i++)
+            for (int i = 0; i < HistoryData.instance.MaxHistoryStored; i++)
             {
                 if (i >= HistoryEntries.Count) break;
-                
+
                 var entry = HistoryEntries[i];
-                
-                if (entry.IsUnresolved)
+
+                if (entry.IsUnresolved && !entry.TryResolveReference() && entry.IsAssetMissing)
                 {
-                    if (!entry.TryResolveReference())
-                    {
-                        // Global Id Resolve is invalid, will just remove it
-                        HistoryEntries.Remove(entry);
-                        i--;
-                        continue;
-                    }
+                    HistoryEntries.RemoveAt(i);
+                    i--;
+                    continue;
                 }
 
                 _visibleHistory.Add(entry);
             }
         }
-        
+
         #region Action Callbacks
         public void GoBack()
         {
-            if (!CanGoBack) return;
-
-            _currentHistoryIndex++;
-            _navigateFlag = true;
-
-            Selection.SetActiveObjectWithContext(_visibleHistory[_currentHistoryIndex].Value, null);
+            int index = FindLoadedIndex(_currentHistoryIndex + 1, 1);
+            if (index >= 0) NavigateTo(index);
         }
 
         public void GoForward()
         {
-            if (!CanGoForward) return;
-
-            _currentHistoryIndex--;
-            _navigateFlag = true;
-
-            Selection.SetActiveObjectWithContext(_visibleHistory[_currentHistoryIndex].Value, null);
+            int index = FindLoadedIndex(_currentHistoryIndex - 1, -1);
+            if (index >= 0) NavigateTo(index);
         }
-        
+
         public void SelectHistoryItem(HistoryEntry historyItem)
         {
-            int index = _visibleHistory.IndexOf(historyItem);
-            if (index == _currentHistoryIndex && Selection.activeObject != null)
-                return;
+            if (historyItem.Value == Selection.activeObject) return;
 
-            if (index < SerializedHistory.Instance.maxHistoryDisplayed)
-            {
-                _currentHistoryIndex = index;
-                _navigateFlag = true;
-            }
-            
             historyItem.Uses++;
-            UpdateVisibleHistory();
-            Selection.SetActiveObjectWithContext(historyItem.Value, null);
-        }
-        
-        public void ToggleFavourite(HistoryEntry historyItem)
-        {
-            if (_rawFavourites.Contains(historyItem))
+            int index = _visibleHistory.IndexOf(historyItem);
+            if (index >= 0 && index < HistoryData.instance.maxHistoryDisplayed)
             {
-                historyItem.IsFavourite = false;
-                _rawFavourites.Remove(historyItem);
+                NavigateTo(index);
             }
             else
             {
-                historyItem.IsFavourite = true;
-                _rawFavourites.Add(historyItem);
+                // Entries outside the displayed history are recorded as a new selection.
+                Selection.SetActiveObjectWithContext(historyItem.Value, null);
             }
+        }
+
+        private void NavigateTo(int index)
+        {
+            _currentHistoryIndex = index;
+            var target = _visibleHistory[index].Value;
+
+            // Selection.selectionChanged does not fire when the selection stays the same.
+            _navigateFlag = target != Selection.activeObject;
+            Selection.SetActiveObjectWithContext(target, null);
+        }
+
+        /// <returns> The first index from start, in the direction of step, with a loaded object, or -1. </returns>
+        private int FindLoadedIndex(int start, int step)
+        {
+            for (int i = start; i >= 0 && i < _visibleHistory.Count; i += step)
+            {
+                if (!_visibleHistory[i].IsUnresolved) return i;
+            }
+
+            return -1;
+        }
+
+        public bool IsFavourite(HistoryEntry historyItem)
+        {
+            return FavouriteEntries.Contains(historyItem);
+        }
+
+        public void ToggleFavourite(HistoryEntry historyItem)
+        {
+            if (!FavouriteEntries.Remove(historyItem))
+            {
+                FavouriteEntries.Add(historyItem);
+            }
+
+            SaveHistory();
+        }
+        #endregion
+
+        #region Save / Load
+        public void SaveHistory()
+        {
+            HistoryData.instance.SaveToFile();
+        }
+
+        public void LoadHistory()
+        {
+            if (HistoryData.instance.showDebug && HistoryEntries.Count == 0)
+                Debug.LogWarning("History is blank before loading!");
+
+            ResolveInBulk(HistoryEntries);
+            ResolveInBulk(FavouriteEntries);
 
             UpdateVisibleHistory();
         }
-        #endregion
-        
-        #region Save / Load
-        public void SaveHistoryToAsset()
-        {
-            EditorUtility.SetDirty(SerializedHistory.Instance);
-            AssetDatabase.SaveAssetIfDirty(SerializedHistory.Instance);
-        }
 
-        public void LoadHistoryFromAsset()
+        private static void ResolveInBulk(List<HistoryEntry> entries)
         {
-            if (SerializedHistory.Instance.showDebug && HistoryEntries.Count == 0) Debug.LogWarning("History is blank before loading!");
             // Resolve ObjectIds into their respective object
             // This is done a bit weirdly like this for performance.
             // It's a slow process so we want to resolve them in bulk.
-            var objectIdArray = HistoryEntries
+            var objectIdArray = entries
                 .Select(x => x.ResolveGlobalId())
                 .ToArray();
 
             Object[] resolvedObjects = new Object[objectIdArray.Length];
             GlobalObjectId.GlobalObjectIdentifiersToObjectsSlow(objectIdArray, resolvedObjects);
 
-            for (int i = 0; i < HistoryEntries.Count; i++)
+            for (int i = 0; i < entries.Count; i++)
             {
-                HistoryEntries[i].Value = resolvedObjects[i];
+                entries[i].Value = resolvedObjects[i];
             }
-                    
-            // Initialize favorites list from history items
-            _rawFavourites = HistoryEntries.Where(x => x.IsFavourite).ToList();
-                    
-            // Initialize other lists
-            UpdateVisibleHistory();
         }
-        
+
         public void ClearHistory()
         {
             HistoryEntries.Clear();
-            _rawFavourites.Clear();
+            FavouriteEntries.Clear();
             _visibleHistory.Clear();
             _currentHistoryIndex = 0;
         }

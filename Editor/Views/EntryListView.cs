@@ -58,8 +58,8 @@ namespace VoidState.InspectorHistory.Editor
                     for (int i = history.Count - 1; i >= 0; i--)
                     {
                         var entry = history[i];
-                        if (entry.IsUnresolved && !showMissing) continue;
-                    
+                        if (IsHidden(entry, showMissing)) continue;
+
                         if (entry.IsPersistentAsset)
                         {
                             projectEntries.Add(entry);
@@ -107,9 +107,9 @@ namespace VoidState.InspectorHistory.Editor
                 {
                     var entry = history[i];
                     if (displayed > _maxVisible) break;
-                    if (entry.IsUnresolved && !showMissing) continue;
-                        
-                    entry.Draw(showSelected && entry.Equals(_service.SelectedEntry),
+                    if (IsHidden(entry, showMissing)) continue;
+
+                    entry.Draw(showSelected && entry.Equals(_service.SelectedEntry), _service.IsFavourite(entry),
                         _service.SelectHistoryItem, _service.ToggleFavourite);
                     displayed++;
                 }
@@ -119,9 +119,9 @@ namespace VoidState.InspectorHistory.Editor
                 for (int i = 0; i < Math.Min(history.Count, _maxVisible); i++)
                 {
                     if (displayed > _maxVisible) break;
-                    if (history[i].IsUnresolved && !showMissing) continue;
-                        
-                    history[i].Draw(showSelected && history[i].Equals(_service.SelectedEntry),
+                    if (IsHidden(history[i], showMissing)) continue;
+
+                    history[i].Draw(showSelected && history[i].Equals(_service.SelectedEntry), _service.IsFavourite(history[i]),
                         _service.SelectHistoryItem, _service.ToggleFavourite);
                     displayed++;
                 }
@@ -133,6 +133,11 @@ namespace VoidState.InspectorHistory.Editor
             }
 
             return displayed;
+        }
+
+        private static bool IsHidden(HistoryEntry entry, bool showMissing)
+        {
+            return entry.IsUnresolved && !showMissing && !entry.IsAssetMissing;
         }
     }
 }

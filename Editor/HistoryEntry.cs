@@ -31,18 +31,19 @@ namespace VoidState.InspectorHistory.Editor
         public string Type = "";
         public string GlobalId;
         public int Uses;
-        public bool IsFavourite;
         public bool IsPersistentAsset;
         public string SceneName = "";
         public string NiceSceneName => System.IO.Path.GetFileNameWithoutExtension(SceneName);
 
         public bool IsUnresolved => Value == null;
 
+        public bool IsAssetMissing => !GlobalObjectId.TryParse(GlobalId, out var id)
+            || string.IsNullOrEmpty(AssetDatabase.AssetPathToGUID(AssetDatabase.GUIDToAssetPath(id.assetGUID), AssetPathToGUIDOptions.OnlyExistingAssets));
+
         public HistoryEntry(Object value)
         {
             Value = value;
             Uses = 0;
-            IsFavourite = false;
         }
 
         public GlobalObjectId ResolveGlobalId()
@@ -65,30 +66,21 @@ namespace VoidState.InspectorHistory.Editor
             if (string.IsNullOrEmpty(GlobalId)) GlobalId = GetObjectGlobalId(Value);
         }
 
+        /// <returns> True if the entry now references a loaded object. </returns>
         public bool TryResolveReference()
         {
             if (!_value && (IsPersistentAsset || SceneManager.GetSceneByPath(SceneName).isLoaded))
             {
-                if (SerializedHistory.Instance.showDebug) Debug.Log($"Attempting to get reference for {Name}");
+                if (HistoryData.instance.showDebug) Debug.Log($"Attempting to get reference for {Name}");
 
-                bool isIdFormatValid = GlobalObjectId.TryParse(GlobalId, out var id);
-                
-                if (isIdFormatValid)
+                if (GlobalObjectId.TryParse(GlobalId, out var id))
                 {
                     _value = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(id);
                 }
-                
-                if (!isIdFormatValid || !_value)
-                {
-                    // We should have been able to resolve the object but couldn't
-                    // This GlobalID is likely no longer valid
-                    GlobalId = null;
-                    return false;
-                }
             }
-            
+
             UpdateMetadata();
-            return true;
+            return _value;
         }
         
         public bool Equals(HistoryEntry other)
